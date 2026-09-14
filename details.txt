@@ -1,0 +1,1392 @@
+You are building a developer tool called **Verya**.
+
+Tagline:
+
+**Verya — Visual editing for real code.**
+
+The goal is to build a tool that combines the best parts of:
+
+* a terminal developer tool
+* a live frontend previewer
+* a visual UI editor
+* a lightweight design system editor
+* an AI-assisted coding environment
+
+But there is one principle above everything else:
+
+**THE SOURCE CODE IS THE SOURCE OF TRUTH.**
+
+Verya must not create a fake visual representation that only exists inside its own editor.
+
+When a user visually changes something, Verya must translate that change back into the user's actual source files.
+
+The user should be able to close Verya, open the project in VS Code, inspect the source files, and see the exact UI changes there.
+
+The user should also be able to edit the source manually and have Verya reflect those changes in the visual preview.
+
+This is fundamentally a:
+
+**CODE ↔ VISUAL UI**
+
+system.
+
+==================================================
+
+1. PRODUCT CONCEPT
+   ==================================================
+
+Verya is a local developer tool that allows a user to point the application at an existing frontend project and visually edit the actual UI.
+
+Example:
+
+```bash
+Verya ./src/App.tsx
+```
+
+or:
+
+```bash
+Verya ./my-project
+```
+
+Verya launches a visual development environment.
+
+The user sees:
+
+* source code
+* component tree
+* live rendered UI
+* properties/design controls
+* assets
+* design systems/templates
+* terminal/build status
+* optional AI assistant
+
+The user can visually interact with the UI and modify:
+
+* position
+* size
+* spacing
+* alignment
+* colors
+* gradients
+* backgrounds
+* borders
+* border radius
+* shadows
+* opacity
+* typography
+* images
+* icons
+* visibility
+* layout structure
+* flex/grid properties
+* responsive behavior
+* component styles
+* component hierarchy
+
+Those modifications must be reflected back into the underlying source code.
+
+==================================================
+2. FIRST MVP
+============
+
+Do NOT attempt to support every framework initially.
+
+The first MVP should focus on:
+
+**React + TypeScript + TSX**
+
+The tool should be able to load a standard frontend project containing things such as:
+
+```text
+src/
+  App.tsx
+  components/
+  pages/
+  styles/
+  assets/
+package.json
+```
+
+Support common styling approaches where practical, especially:
+
+* CSS
+* CSS modules
+* Tailwind CSS
+* inline styles
+
+Do not create an unnecessarily large abstraction layer for every CSS framework.
+
+Build the architecture so other frameworks can be added later.
+
+Potential future support:
+
+* JSX
+* Vue
+* Svelte
+* HTML/CSS
+* React Native
+* other component-based UI systems
+
+But React + TSX is the MVP.
+
+==================================================
+3. SOURCE CODE MUST REMAIN REAL
+===============================
+
+This is the most important requirement.
+
+Never treat the rendered preview as the canonical representation.
+
+The canonical representation is:
+
+```text
+actual source files
+```
+
+The preview is disposable.
+
+The internal editor model is also not authoritative.
+
+The system should conceptually work like:
+
+```text
+SOURCE FILE
+     ↓
+Parser / AST
+     ↓
+Component Understanding
+     ↓
+Live Runtime
+     ↓
+Visual Canvas
+```
+
+And when the user makes a visual modification:
+
+```text
+Visual Change
+     ↓
+Semantic Layout/Style Operation
+     ↓
+AST / Source Transformation
+     ↓
+Formatted Source File
+     ↓
+Save
+     ↓
+Live Preview Update
+```
+
+Do not solve this primarily with crude string replacement.
+
+Use an AST/code transformation approach where appropriate.
+
+The generated source should remain:
+
+* readable
+* formatted
+* idiomatic
+* maintainable
+* structurally similar to the original code
+
+Do not destroy the developer's code just because the visual editor is easier to implement that way.
+
+==================================================
+4. BIDIRECTIONAL EDITING
+========================
+
+Verya must support two directions.
+
+### Code → UI
+
+When the user edits:
+
+```tsx
+<div className="p-4 rounded-xl">
+```
+
+the visual canvas updates.
+
+### UI → Code
+
+When the user selects that element and changes:
+
+```text
+Padding: 16px → 24px
+Radius: 12px → 20px
+```
+
+Verya updates the underlying TSX/CSS.
+
+This synchronization should happen continuously or with an obvious save/apply action depending on the implementation.
+
+The user should never have to manually recreate visual changes in code.
+
+==================================================
+5. APPLICATION LAYOUT
+=====================
+
+Create a professional desktop application interface.
+
+Use a layout similar to:
+
+```text
+┌───────────────────────────────────────────────────────────────────────┐
+│ Verya       Project       Preview       Design       AI      Save     │
+├───────────────┬───────────────────────────────┬───────────────────────┤
+│               │                               │                       │
+│ COMPONENTS    │          LIVE CANVAS         │ PROPERTIES            │
+│               │                               │                       │
+│ App           │                               │ Layout                │
+│ ├ Header      │       rendered application   │ Position              │
+│ ├ Hero        │                               │ Size                  │
+│ │ ├ Image     │                               │ Spacing               │
+│ │ ├ Title     │                               │                       │
+│ │ └ Button    │                               │ Appearance            │
+│ └ Footer      │                               │ Background            │
+│               │                               │ Border                 │
+│               │                               │ Radius                 │
+│               │                               │ Shadow                 │
+│               │                               │ Typography             │
+│               │                               │                       │
+├───────────────┴───────────────────────────────┴───────────────────────┤
+│ terminal / build / diagnostics / file changes                         │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+The exact arrangement can evolve, but the following concepts should exist:
+
+### Left panel
+
+Project/component structure.
+
+### Center
+
+Live UI canvas.
+
+### Right panel
+
+Properties/design controls.
+
+### Bottom panel
+
+Optional:
+
+* terminal
+* build output
+* diagnostics
+* source transformation history
+* file changes
+
+==================================================
+6. LIVE CANVAS
+==============
+
+The center of Verya should be the rendered application.
+
+It must support:
+
+* selecting elements
+* hover outlines
+* visual selection state
+* nested component selection
+* click-to-select
+* drag interactions
+* resize handles
+* responsive preview sizes
+
+When an element is selected, show a subtle visual outline and handles.
+
+Example:
+
+```text
+┌────────────────────────────┐
+│                            │
+│        Selected Card       │
+│                            │
+└────────────────────────────┘
+     ↑ selection controls
+```
+
+Do not visually overwhelm the application with editor controls.
+
+The editor chrome should disappear or become subtle when not needed.
+
+==================================================
+7. COMPONENT TREE
+=================
+
+Create a component hierarchy panel.
+
+Example:
+
+```text
+App
+├── Header
+│   ├── Logo
+│   └── Navigation
+├── Hero
+│   ├── HeroImage
+│   ├── Heading
+│   ├── Description
+│   └── StartButton
+└── Footer
+```
+
+Selecting an item in the tree selects the corresponding UI element in the canvas.
+
+Selecting an element on the canvas highlights it in the tree.
+
+The relationship must be bidirectional.
+
+Where possible, identify actual React components rather than treating the entire DOM as anonymous nodes.
+
+==================================================
+8. VISUAL EDITING
+=================
+
+The user should be able to select an element and directly modify its visual properties.
+
+Support:
+
+### Layout
+
+* display
+* width
+* height
+* min/max width
+* min/max height
+* margin
+* padding
+* gap
+* alignment
+* justification
+* flex direction
+* grid structure
+* positioning
+
+### Position
+
+Allow drag interactions.
+
+BUT:
+
+Do not automatically destroy responsive layouts by converting everything into absolute positioning.
+
+The editor must understand the existing layout model.
+
+For example:
+
+If an element is in Flexbox, prefer modifying:
+
+* gap
+* margin
+* alignment
+* order
+* padding
+
+If an element is in Grid, prefer:
+
+* grid placement
+* gap
+* alignment
+
+Only use absolute coordinates when the layout genuinely calls for absolute positioning.
+
+The goal is:
+
+**visual freedom without generating garbage CSS.**
+
+==================================================
+9. RESPONSIVE DESIGN
+====================
+
+The visual editor must understand responsive layouts.
+
+Provide preview sizes such as:
+
+* Mobile
+* Tablet
+* Desktop
+* Custom width
+
+Allow the user to inspect the UI at different widths.
+
+Do not make changes that only look correct at one arbitrary screen size.
+
+When a property is changed, Verya should understand whether it belongs to:
+
+* base styles
+* mobile breakpoint
+* tablet breakpoint
+* desktop breakpoint
+
+Where possible, expose responsive controls.
+
+For example:
+
+```text
+Width
+
+Desktop: 420px
+Tablet: 360px
+Mobile: 100%
+```
+
+The actual implementation may use appropriate media queries/classes.
+
+==================================================
+10. DESIGN SYSTEMS / TEMPLATES
+==============================
+
+One of Verya's major features should be reusable visual design systems.
+
+Do NOT treat a template as a screenshot or a static page.
+
+A template is a coordinated set of visual rules.
+
+Examples:
+
+* Glassmorphism
+* Liquid Glass
+* Minimal
+* Dark Premium
+* Neo Brutalism
+* Soft UI
+* Cyberpunk
+* Editorial
+* Material-inspired
+* Gradient
+* Clean SaaS
+
+The first important template should be:
+
+# GLASSMORPHISM
+
+Applying the Glassmorphism system should modify the existing interface intelligently.
+
+Do not replace the entire application.
+
+Instead analyze existing components and apply the visual language.
+
+Glassmorphism should influence:
+
+* surfaces
+* cards
+* buttons
+* navigation
+* dialogs
+* inputs
+* borders
+* shadows
+* background gradients
+* typography hierarchy
+* spacing
+* decorative lighting
+
+A glassmorphism system may include:
+
+```text
+dark atmospheric background
+translucent surfaces
+backdrop blur
+subtle borders
+large corner radius
+soft depth
+background glow
+controlled accent colors
+```
+
+The user should be able to customize the system.
+
+For example:
+
+```text
+Glassmorphism
+
+Surface opacity       12%
+Blur                   20px
+Border opacity          18%
+Corner radius           24px
+Shadow                  Soft
+Accent                 Orange
+Background             Dark
+```
+
+Changing the design system values should update the actual UI.
+
+==================================================
+11. TEMPLATE APPLICATION
+========================
+
+Applying a design system should be intelligent.
+
+For example:
+
+Current:
+
+```text
+Card
+Button
+Input
+Navigation
+```
+
+Apply Glassmorphism.
+
+Verya should determine appropriate styling for each semantic element.
+
+It should NOT simply apply one generic class to everything.
+
+Cards may receive:
+
+* translucent surface
+* blur
+* border
+* radius
+
+Buttons may receive:
+
+* stronger contrast
+* accent
+* glass surface
+* glow
+
+Navigation may receive:
+
+* glass container
+* separators
+* active state
+
+This should feel designed by a human.
+
+==================================================
+12. BACKGROUND EDITING
+======================
+
+The user should be able to click the page/background and modify:
+
+* solid color
+* gradient
+* radial gradient
+* image
+* opacity
+* overlay
+* blur
+* background position
+* background size
+
+Example UI:
+
+```text
+BACKGROUND
+
+Color
+[ #0B0D12 ]
+
+Gradient
+[ + ]
+
+Image
+[ Choose ]
+
+Overlay
+[──────●──]
+
+Blur
+[────●────]
+```
+
+These changes must update the actual source implementation.
+
+==================================================
+13. IMAGE EDITING
+=================
+
+When selecting an image, provide:
+
+* replace image
+* upload image
+* choose existing asset
+* external URL where appropriate
+* crop
+* object-fit
+* object-position
+* radius
+* opacity
+* shadow
+
+Dragging a new image into the editor should replace the actual image reference in the source.
+
+Manage local assets cleanly.
+
+Do not duplicate files unnecessarily.
+
+==================================================
+14. TYPOGRAPHY
+==============
+
+Allow visual editing of:
+
+* font family
+* size
+* weight
+* line height
+* letter spacing
+* alignment
+* text color
+* text opacity
+
+Use strong visual hierarchy.
+
+Large headings should feel large.
+
+Important numbers should feel prominent.
+
+Secondary information should recede.
+
+The editor should show a clear relationship between design controls and generated source.
+
+==================================================
+15. COLORS
+==========
+
+Create color controls with:
+
+* color picker
+* hex
+* RGB/HSL where useful
+* opacity
+* gradients
+
+Support design tokens where possible.
+
+For example:
+
+```text
+Primary
+Secondary
+Background
+Surface
+Text
+Muted
+Accent
+Border
+```
+
+When multiple elements use the same semantic color, Verya should ideally recognize that.
+
+The user should be able to change:
+
+```text
+Primary Accent
+```
+
+and update every component referencing that token.
+
+Do not destroy the underlying design system by creating hundreds of unrelated literal color values.
+
+==================================================
+16. SPACING AND DESIGN TOKENS
+=============================
+
+Where practical, support reusable tokens for:
+
+* spacing
+* radius
+* typography
+* colors
+* shadows
+
+Example:
+
+```text
+spacing-sm
+spacing-md
+spacing-lg
+
+radius-sm
+radius-md
+radius-lg
+```
+
+Visual adjustments should prefer existing tokens where they exist.
+
+If the code already uses a coherent spacing system, preserve it.
+
+==================================================
+17. DRAGGING AND RESIZING
+=========================
+
+The user must be able to visually drag elements.
+
+Example:
+
+Select button.
+
+Drag downward.
+
+Verya determines the appropriate source-level modification.
+
+Do not simply write:
+
+```css
+top: 183px;
+left: 421px;
+```
+
+unless the component actually uses absolute positioning.
+
+The objective is:
+
+**Figma-like manipulation with developer-quality source output.**
+
+Likewise, resizing should intelligently map to:
+
+* width
+* max-width
+* flex-basis
+* grid columns
+* padding
+* font size
+
+depending on context.
+
+==================================================
+18. ASSET PANEL
+===============
+
+Provide an asset browser.
+
+Show:
+
+* images
+* icons
+* fonts
+* local static assets
+
+Allow drag-and-drop from assets into the canvas where practical.
+
+When inserting an asset, update the source properly.
+
+==================================================
+19. SOURCE EDITOR
+=================
+
+Verya should include a code editor.
+
+The user should be able to switch between:
+
+```text
+Visual
+Code
+Split
+```
+
+In Split mode:
+
+```text
+source code | visual preview
+```
+
+Changes in the code editor should update the visual preview.
+
+Changes in the visual editor should update the code.
+
+The code editor should have:
+
+* syntax highlighting
+* formatting
+* diagnostics
+* file tabs
+* basic autocomplete where feasible
+
+Do not attempt to recreate VS Code completely.
+
+Verya is a visual development tool, not a full IDE replacement.
+
+==================================================
+20. TERMINAL EXPERIENCE
+=======================
+
+Verya should be launchable from the terminal.
+
+Example:
+
+```bash
+Verya .
+```
+
+or:
+
+```bash
+Verya src/App.tsx
+```
+
+The CLI should:
+
+1. detect the project
+2. detect framework
+3. identify package manager
+4. start the development runtime
+5. launch the Verya editor
+6. connect the visual editor to the project
+
+The tool should show useful terminal output.
+
+Example:
+
+```text
+Verya
+
+Project: my-app
+Framework: React
+Language: TypeScript
+Package manager: npm
+
+Starting preview...
+Ready: http://localhost:xxxx
+```
+
+==================================================
+21. LIVE PREVIEW / HOT RELOAD
+=============================
+
+Changes should appear quickly.
+
+Ideal workflow:
+
+```text
+change source
+   ↓
+compile
+   ↓
+preview updates
+```
+
+and:
+
+```text
+visual change
+   ↓
+source transformation
+   ↓
+preview updates
+```
+
+Do not force full project restarts for trivial visual changes where avoidable.
+
+==================================================
+22. UNDO / REDO
+===============
+
+Visual editing must have reliable:
+
+* undo
+* redo
+
+These operations should operate on source transformations where possible.
+
+For example:
+
+```text
+Changed padding
+Changed radius
+Changed background
+Moved component
+```
+
+Undo should reverse those operations cleanly.
+
+Do not only undo the canvas state.
+
+Undo must ultimately restore the source correctly.
+
+==================================================
+23. CHANGE HISTORY
+==================
+
+Show a lightweight history of recent visual operations.
+
+Example:
+
+```text
+Recent Changes
+
+Changed Hero padding
+Changed Start Button radius
+Changed background
+Replaced hero image
+Applied Glassmorphism
+```
+
+Allow reverting individual operations where feasible.
+
+==================================================
+24. SAVE BEHAVIOR
+=================
+
+The user should always understand whether changes are:
+
+* saved
+* unsaved
+* compiling
+* failed
+
+Use subtle status indicators.
+
+Example:
+
+```text
+● Saved
+● Saving...
+⚠ Build error
+```
+
+Never silently discard source modifications.
+
+==================================================
+25. ERROR HANDLING
+==================
+
+If a generated transformation creates a compile error:
+
+Do not leave the project broken without explanation.
+
+Show:
+
+* what changed
+* error message
+* affected file
+* possibility of reverting the last operation
+
+Example:
+
+```text
+Build Error
+
+App.tsx
+Line 42
+
+Unexpected token...
+
+[Revert Last Change]
+```
+
+The tool should be defensive about source transformations.
+
+==================================================
+26. AI ASSISTANT
+================
+
+Add an optional AI assistant.
+
+The AI should not primarily act as a code generator.
+
+It should act as a:
+
+**design + code transformation assistant.**
+
+Examples of commands:
+
+"Make this look like a premium fitness app."
+
+"Apply glassmorphism."
+
+"Make the cards more transparent."
+
+"Move the start button lower."
+
+"Make the hero image larger."
+
+"Use a darker background."
+
+"Make this responsive on mobile."
+
+"Give the dashboard more breathing room."
+
+"Make the buttons feel more premium."
+
+When asked to modify the interface, the AI should operate through the same source transformation system as the visual editor.
+
+It should not bypass the source model by generating arbitrary replacement files.
+
+==================================================
+27. DESIGN PRESET EDITOR
+========================
+
+Allow users to save their own design systems.
+
+Example:
+
+```text
+My Glass
+
+Background: #080A10
+Surface opacity: 14%
+Blur: 22px
+Radius: 24px
+Accent: #FF7A18
+Shadow: soft
+```
+
+Save it as:
+
+```text
+My Glass
+```
+
+Then apply it to another project.
+
+Eventually this can become a reusable design-system library.
+
+==================================================
+28. PERFORMANCE
+===============
+
+The preview must feel fast.
+
+Do not repeatedly rebuild the entire application when unnecessary.
+
+Use incremental updates where possible.
+
+Avoid memory leaks.
+
+Do not hold unnecessary copies of large projects in memory.
+
+Images should not cause uncontrolled memory usage.
+
+==================================================
+29. SECURITY / PROJECT SAFETY
+=============================
+
+Because Verya operates directly on real files, treat file modification as a high-risk operation.
+
+Before making major transformations:
+
+* know exactly which files will change
+* avoid unrelated files
+* create safe backups/checkpoints where appropriate
+* make changes atomic where possible
+
+Never overwrite arbitrary project files without understanding them.
+
+Do not execute arbitrary project commands without the user's explicit context/intent.
+
+==================================================
+30. CODE QUALITY
+================
+
+The implementation should be:
+
+* modular
+* readable
+* typed
+* testable
+* documented where useful
+
+Separate concerns clearly.
+
+Suggested conceptual modules:
+
+```text
+CLI
+Project Detector
+Runtime Manager
+Source Parser
+AST Transformer
+Component Tree
+Visual Canvas
+Style Inspector
+Design System Engine
+Asset Manager
+History Manager
+AI Layer
+File Watcher
+Preview Runtime
+```
+
+Do not tightly couple the visual editor to one specific framework internals.
+
+==================================================
+31. IMPORTANT DESIGN PHILOSOPHY
+===============================
+
+Do not build:
+
+"Figma that happens to export code."
+
+Build:
+
+**"A visual layer on top of real source code."**
+
+These are fundamentally different products.
+
+The user should feel like they are editing their application itself.
+
+Not designing a mockup.
+
+==================================================
+32. VISUAL DESIGN OF Verya ITSELF
+=================================
+
+Verya itself should have a beautiful modern interface.
+
+Use a premium dark interface.
+
+The application should feel like a serious developer tool.
+
+Use glassmorphism carefully.
+
+Suggested aesthetic:
+
+* dark charcoal/black base
+* translucent panels
+* subtle borders
+* soft depth
+* controlled blur
+* restrained gradients
+* elegant typography
+* compact controls
+* excellent spacing
+
+Do not make the editor look like a gaming RGB dashboard.
+
+Do not overuse glow.
+
+Keep it sophisticated.
+
+Think:
+
+premium developer tool + modern design software.
+
+==================================================
+33. PRIMARY USER WORKFLOW
+=========================
+
+The final workflow should feel approximately like this:
+
+Step 1:
+
+User opens terminal.
+
+```bash
+Verya ./my-react-project
+```
+
+Step 2:
+
+Verya detects the project.
+
+Step 3:
+
+Verya launches the live preview.
+
+Step 4:
+
+User sees the real application.
+
+Step 5:
+
+User clicks an element.
+
+Step 6:
+
+Verya identifies the corresponding source component.
+
+Step 7:
+
+User changes:
+
+```text
+padding
+color
+radius
+position
+image
+font
+```
+
+Step 8:
+
+Verya updates the real source.
+
+Step 9:
+
+Preview instantly reflects the change.
+
+Step 10:
+
+User opens VS Code.
+
+The source contains the changes.
+
+Nothing is lost.
+
+==================================================
+34. EXAMPLE
+===========
+
+Given:
+
+```tsx
+export default function App() {
+  return (
+    <main className="p-4">
+      <section className="card">
+        <h1>Hello</h1>
+        <button>Start</button>
+      </section>
+    </main>
+  );
+}
+```
+
+The user selects the card.
+
+They choose:
+
+```text
+Template: Glassmorphism
+Radius: 24px
+Padding: 32px
+Blur: 20px
+Background: translucent
+```
+
+Verya modifies the actual implementation.
+
+The exact syntax can depend on the project's styling system, but it should result in legitimate developer-readable source.
+
+Then the user drags the button lower.
+
+Verya should choose an appropriate layout-level modification rather than blindly introducing absolute positioning.
+
+==================================================
+35. MVP PRIORITIES
+==================
+
+Do not try to build every feature simultaneously.
+
+Prioritize in this order:
+
+### Phase 1
+
+Get this working:
+
+```text
+React TSX project
+        ↓
+Verya
+        ↓
+live preview
+        ↓
+element selection
+        ↓
+property editing
+        ↓
+source update
+        ↓
+live preview update
+```
+
+### Phase 2
+
+Add:
+
+* component tree
+* drag/resize
+* responsive preview
+* assets
+* undo/redo
+* better source transformations
+
+### Phase 3
+
+Add:
+
+* design systems
+* Glassmorphism preset
+* reusable tokens
+* template application
+
+### Phase 4
+
+Add:
+
+* AI design assistant
+* natural language visual editing
+
+### Phase 5
+
+Expand:
+
+* additional frameworks
+* collaborative workflows
+* reusable template marketplace/library
+
+Do not jump to Phase 5 before Phase 1 is robust.
+
+==================================================
+36. MOST IMPORTANT IMPLEMENTATION RULE
+======================================
+
+Whenever you have to choose between:
+
+A visually impressive implementation that generates terrible code
+
+and
+
+A slightly less magical implementation that preserves clean source code
+
+CHOOSE THE SECOND.
+
+The defining quality of Verya is:
+
+**visual editing without sacrificing real code.**
+
+The user must be able to trust the resulting source.
+
+==================================================
+37. FINAL ACCEPTANCE CRITERIA
+=============================
+
+The MVP is successful only if I can:
+
+1. Open a React/TypeScript project from the terminal.
+
+2. See the actual application rendered live.
+
+3. Select an element visually.
+
+4. See its relationship to the actual source/component.
+
+5. Change visual properties from the UI.
+
+6. See the preview update.
+
+7. See the actual TSX/CSS source update.
+
+8. Edit the source manually.
+
+9. See the visual preview update.
+
+10. Drag an element while preserving a sensible responsive layout.
+
+11. Change a background color.
+
+12. Replace an image.
+
+13. Apply a Glassmorphism design system.
+
+14. Undo the changes.
+
+15. Save the project.
+
+16. Open the same project in another editor and see the resulting source code.
+
+If these work reliably, Verya has achieved its core purpose.
+
+Everything else is secondary.
