@@ -13,6 +13,8 @@ import {
   GitCommit,
   Terminal,
   Check,
+  Sun,
+  Moon,
 } from 'lucide-react'
 
 export const TopBar = () => {
@@ -29,6 +31,8 @@ export const TopBar = () => {
   const setIsTerminalOpen = useStore((s) => s.setIsTerminalOpen)
   const changedFiles = useStore((s) => s.changedFiles)
   const addTerminalLog = useStore((s) => s.addTerminalLog)
+  const theme = useStore((s) => s.theme)
+  const toggleTheme = useStore((s) => s.toggleTheme)
 
   const [savingSession, setSavingSession] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
@@ -51,21 +55,28 @@ export const TopBar = () => {
   const modifiedCount = session?.modifiedFiles.length || changedFiles.length
 
   return (
-    <header className="h-12 border-b border-white/[0.07] bg-[#0b0d12]/90 backdrop-blur-xl px-4 flex items-center justify-between z-30 select-none">
+    <header
+      className="h-12 border-b px-4 flex items-center justify-between z-30 select-none backdrop-blur-xl"
+      style={{
+        background: 'var(--topbar-bg)',
+        borderColor: 'var(--border-subtle)',
+        color: 'var(--text-primary)',
+      }}
+    >
       {/* Left: Logo & Project Info */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-indigo-500/30">
             <div className="w-2 h-2 rotate-45 bg-white rounded-xs" />
           </div>
-          <span className="font-semibold tracking-tight text-white text-sm">Verya</span>
+          <span className="font-semibold tracking-tight text-sm" style={{ color: 'var(--text-primary)' }}>Verya</span>
         </div>
 
-        <div className="h-4 w-px bg-white/10" />
+        <div className="h-4 w-px" style={{ background: 'var(--border-subtle)' }} />
 
         {/* Project & Session badge */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-white/80 font-medium">{project?.name || 'Project'}</span>
+          <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{project?.name || 'Project'}</span>
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[11px] text-indigo-300">
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
             <span>Isolated Session</span>
@@ -76,49 +87,55 @@ export const TopBar = () => {
       {/* Center: Viewport & View Mode controls */}
       <div className="flex items-center gap-2">
         {/* Viewport switcher */}
-        <div className="flex items-center p-0.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+        <div className="flex items-center p-0.5 rounded-lg border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-muted)' }}>
           <button
             onClick={() => setViewport('desktop')}
             title="Desktop view"
-            className={`p-1.5 rounded-md transition ${viewport === 'desktop' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/70'}`}
+            className={`p-1.5 rounded-md transition ${viewport === 'desktop' ? 'bg-white/10 text-white shadow-sm' : 'hover:text-white/70'}`}
+            style={{ color: viewport === 'desktop' ? undefined : 'var(--text-muted)' }}
           >
             <Monitor className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setViewport('tablet')}
             title="Tablet view (768px)"
-            className={`p-1.5 rounded-md transition ${viewport === 'tablet' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/70'}`}
+            className={`p-1.5 rounded-md transition ${viewport === 'tablet' ? 'bg-white/10 text-white shadow-sm' : 'hover:text-white/70'}`}
+            style={{ color: viewport === 'tablet' ? undefined : 'var(--text-muted)' }}
           >
             <Tablet className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setViewport('mobile')}
             title="Mobile view (390px)"
-            className={`p-1.5 rounded-md transition ${viewport === 'mobile' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/70'}`}
+            className={`p-1.5 rounded-md transition ${viewport === 'mobile' ? 'bg-white/10 text-white shadow-sm' : 'hover:text-white/70'}`}
+            style={{ color: viewport === 'mobile' ? undefined : 'var(--text-muted)' }}
           >
             <Smartphone className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* View Mode switcher (Visual | Split | Code) */}
-        <div className="flex items-center p-0.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+        <div className="flex items-center p-0.5 rounded-lg border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-muted)' }}>
           <button
             onClick={() => setActiveView('visual')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition ${activeView === 'visual' ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'text-white/50 hover:text-white'}`}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition ${activeView === 'visual' ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'hover:text-white'}`}
+            style={{ color: activeView === 'visual' ? undefined : 'var(--text-muted)' }}
           >
             <Eye className="w-3.5 h-3.5" />
             <span>Visual</span>
           </button>
           <button
             onClick={() => setActiveView('split')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition ${activeView === 'split' ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'text-white/50 hover:text-white'}`}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition ${activeView === 'split' ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'hover:text-white'}`}
+            style={{ color: activeView === 'split' ? undefined : 'var(--text-muted)' }}
           >
             <Columns className="w-3.5 h-3.5" />
             <span>Split</span>
           </button>
           <button
             onClick={() => setActiveView('code')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition ${activeView === 'code' ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'text-white/50 hover:text-white'}`}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition ${activeView === 'code' ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'hover:text-white'}`}
+            style={{ color: activeView === 'code' ? undefined : 'var(--text-muted)' }}
           >
             <Code2 className="w-3.5 h-3.5" />
             <span>Code</span>
@@ -126,11 +143,14 @@ export const TopBar = () => {
         </div>
       </div>
 
-      {/* Right: Sessions, Save Session, Accept Changes, Terminal */}
+      {/* Right: Sessions, Save Session, Accept Changes, Theme, Terminal */}
       <div className="flex items-center gap-2.5">
         <button
           onClick={() => setIsSessionsModalOpen(true)}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-white/70 hover:text-white hover:bg-white/[0.05] transition border border-transparent hover:border-white/10"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition border border-transparent hover:border-white/10"
+          style={{ color: 'var(--text-muted)' }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
         >
           <FolderSync className="w-3.5 h-3.5" />
           <span>Sessions</span>
@@ -141,7 +161,12 @@ export const TopBar = () => {
           onClick={handleSaveSession}
           disabled={savingSession}
           title="Preserve session in Verya storage without writing to original files"
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-white/[0.04] hover:bg-white/[0.08] text-white/80 border border-white/[0.08] transition"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition border"
+          style={{
+            background: 'var(--bg-surface)',
+            borderColor: 'var(--border-muted)',
+            color: 'var(--text-primary)',
+          }}
         >
           {justSaved ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Save className="w-3.5 h-3.5" />}
           <span>{justSaved ? 'Saved' : 'Save Session'}</span>
@@ -161,13 +186,35 @@ export const TopBar = () => {
           )}
         </button>
 
-        <div className="h-4 w-px bg-white/10" />
+        <div className="h-4 w-px" style={{ background: 'var(--border-subtle)' }} />
+
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          className="p-1.5 rounded-lg border transition"
+          style={{
+            background: 'var(--bg-surface)',
+            borderColor: 'var(--border-muted)',
+            color: 'var(--text-muted)',
+          }}
+        >
+          {theme === 'dark'
+            ? <Sun className="w-3.5 h-3.5 text-amber-400" />
+            : <Moon className="w-3.5 h-3.5 text-indigo-400" />
+          }
+        </button>
 
         {/* Terminal output toggle */}
         <button
           onClick={() => setIsTerminalOpen(!isTerminalOpen)}
           title="Toggle Build / Output Log"
-          className={`p-1.5 rounded-lg border transition ${isTerminalOpen ? 'bg-indigo-600/20 text-indigo-300 border-indigo-500/30' : 'text-white/50 hover:text-white border-white/[0.06] bg-white/[0.02]'}`}
+          className={`p-1.5 rounded-lg border transition ${isTerminalOpen ? 'bg-indigo-600/20 text-indigo-300 border-indigo-500/30' : ''}`}
+          style={!isTerminalOpen ? {
+            background: 'var(--bg-surface)',
+            borderColor: 'var(--border-muted)',
+            color: 'var(--text-muted)',
+          } : {}}
         >
           <Terminal className="w-3.5 h-3.5" />
         </button>

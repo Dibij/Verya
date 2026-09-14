@@ -69,6 +69,10 @@ interface VeryaStore {
   // Undo / Redo history
   undoCount: number
   setUndoCount: (count: number) => void
+
+  // Theme
+  theme: 'dark' | 'light'
+  toggleTheme: () => void
 }
 
 export const useStore = create<VeryaStore>((set) => ({
@@ -146,4 +150,18 @@ export const useStore = create<VeryaStore>((set) => ({
 
   undoCount: 0,
   setUndoCount: (undoCount) => set({ undoCount }),
+
+  // Theme — persist to localStorage so it survives refreshes
+  theme: (typeof window !== 'undefined' && localStorage.getItem('verya-theme') === 'light') ? 'light' : 'dark',
+  toggleTheme: () =>
+    set((state) => {
+      const next = state.theme === 'dark' ? 'light' : 'dark'
+      localStorage.setItem('verya-theme', next)
+      if (next === 'light') {
+        document.documentElement.classList.add('light')
+      } else {
+        document.documentElement.classList.remove('light')
+      }
+      return { theme: next }
+    }),
 }))

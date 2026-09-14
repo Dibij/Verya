@@ -16,6 +16,14 @@ function App() {
   const addTerminalLog = useStore((s) => s.addTerminalLog)
   const project = useStore((s) => s.project)
 
+  // Apply saved theme on first load
+  useEffect(() => {
+    const saved = localStorage.getItem('verya-theme')
+    if (saved === 'light') {
+      document.documentElement.classList.add('light')
+    }
+  }, [])
+
   const wsClientRef = useRef<ReturnType<typeof createWsClient> | null>(null)
 
   // Fetch project & session info on mount

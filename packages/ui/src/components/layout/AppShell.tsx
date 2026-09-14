@@ -13,7 +13,10 @@ export const AppShell = () => {
   const activeView = useStore((s) => s.activeView)
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#0b0d12] text-white overflow-hidden select-none">
+    <div
+      className="h-screen w-screen flex flex-col overflow-hidden select-none"
+      style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}
+    >
       <TopBar />
 
       <div className="flex-1 flex overflow-hidden relative">

@@ -17,13 +17,15 @@ export const Canvas = () => {
   }
 
   return (
-    <div className="flex-1 h-full relative overflow-hidden bg-[#090b10] flex items-center justify-center p-4">
+    <div
+      className="flex-1 h-full relative overflow-hidden flex items-center justify-center p-4"
+      style={{ background: 'var(--canvas-bg)' }}
+    >
       {/* Background canvas grid dots */}
       <div
         className="absolute inset-0 pointer-events-none opacity-20"
         style={{
-          backgroundImage:
-            'radial-gradient(rgba(255,255,255,0.15) 1px, transparent 1px)',
+          backgroundImage: 'radial-gradient(var(--canvas-dot) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
         }}
       />

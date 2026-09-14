@@ -6,14 +6,48 @@
   box-sizing: border-box;
 }
 
+/* ── Theme CSS Variables ──────────────────────────────── */
+:root {
+  --bg-base:        #0B0D12;
+  --bg-panel:       #0b0d13;
+  --bg-surface:     rgba(255, 255, 255, 0.03);
+  --border-subtle:  rgba(255, 255, 255, 0.07);
+  --border-muted:   rgba(255, 255, 255, 0.06);
+  --text-primary:   #E8EAF0;
+  --text-muted:     rgba(255, 255, 255, 0.5);
+  --text-faint:     rgba(255, 255, 255, 0.3);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.12);
+  --scrollbar-hover: rgba(255, 255, 255, 0.2);
+  --canvas-bg:      #090b10;
+  --canvas-dot:     rgba(255, 255, 255, 0.15);
+  --topbar-bg:      rgba(11, 13, 18, 0.9);
+}
+
+html.light {
+  --bg-base:        #f3f4f6;
+  --bg-panel:       #ffffff;
+  --bg-surface:     rgba(0, 0, 0, 0.03);
+  --border-subtle:  rgba(0, 0, 0, 0.09);
+  --border-muted:   rgba(0, 0, 0, 0.08);
+  --text-primary:   #111827;
+  --text-muted:     rgba(17, 24, 39, 0.55);
+  --text-faint:     rgba(17, 24, 39, 0.35);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --scrollbar-hover: rgba(0, 0, 0, 0.25);
+  --canvas-bg:      #e5e7eb;
+  --canvas-dot:     rgba(0, 0, 0, 0.12);
+  --topbar-bg:      rgba(255, 255, 255, 0.92);
+}
+
 body {
-  background-color: #0B0D12;
-  color: #E8EAF0;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
   font-family: 'Inter', -apple-system, sans-serif;
   margin: 0;
   padding: 0;
   height: 100vh;
   overflow: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 #root {
@@ -31,19 +65,19 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--scrollbar-hover);
 }
 
 /* Glassmorphism panel utility */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-surface);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border-subtle);
 }
 
 /* Styled range slider */
@@ -51,7 +85,7 @@ input[type='range'] {
   -webkit-appearance: none;
   appearance: none;
   height: 4px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-subtle);
   border-radius: 2px;
   outline: none;
   cursor: pointer;

@@ -10,9 +10,18 @@ export const LeftPanel = () => {
   const setLeftTab = useStore((s) => s.setLeftTab)
 
   return (
-    <aside className="w-[280px] h-full border-r border-white/[0.06] bg-[#0b0d13]/80 backdrop-blur-xl flex flex-col z-20 select-none">
+    <aside
+      className="w-[280px] h-full flex flex-col z-20 select-none backdrop-blur-xl"
+      style={{
+        background: 'var(--bg-panel)',
+        borderRight: '1px solid var(--border-subtle)',
+      }}
+    >
       {/* Tab Navigation */}
-      <div className="h-10 border-b border-white/[0.06] px-2 flex items-center gap-1 bg-white/[0.01]">
+      <div
+        className="h-10 px-2 flex items-center gap-1"
+        style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)' }}
+      >
         <button
           onClick={() => setLeftTab('components')}
           title="Component Hierarchy"
