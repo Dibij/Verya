@@ -16,6 +16,10 @@
     "build:cli": "npm run build -w @verya/cli",
     "build": "npm run build:ui && npm run build:server && npm run build:cli",
     "package": "node scripts/package-release.js",
+    "release": "node scripts/auto-release.js patch",
+    "release:patch": "node scripts/auto-release.js patch",
+    "release:minor": "node scripts/auto-release.js minor",
+    "release:major": "node scripts/auto-release.js major",
     "start": "node packages/cli/dist/index.js",
     "verya": "node packages/cli/dist/index.js",
     "lint": "eslint packages/*/src --ext .ts,.tsx"
