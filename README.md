@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Dibij/Verya?color=6366f1)](https://github.com/Dibij/Verya/releases)
 [![Stack](https://img.shields.io/badge/stack-React%20%2B%20TypeScript-61dafb.svg)]()
-[![Build](https://img.shields.io/badge/build-passing-emerald.svg)]()
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 
 </div>
 
@@ -33,6 +33,7 @@ When you tweak padding, colors, typography, or apply a Glassmorphism design syst
 1. **The source code is the source of truth.** The preview is disposable; only your repository files matter.
 2. **Project Isolation & Safety First.** Verya creates an isolated editing session. Your original project remains untouched while you experiment.
 3. **Deliberate Commits (Save Session vs. Accept Changes).** You review clean line diffs and conflict alerts before changes are applied to your original source.
+4. **Zero Configuration & Frictionless CLI.** Install once. Run `verya` anywhere. No manual PATH juggling required.
 
 ```
 Original Project
@@ -55,132 +56,94 @@ Original Project Updated!
 
 ---
 
-## Installation & Setup Guide
+## Quick Install (One-Line Commands)
 
-### 1. Prerequisites
-- **Node.js**: `v18.0.0` or higher (Node 20+ recommended)
-- **npm** (or `pnpm` / `yarn`)
-- **Git**
+No manual PATH configuration, no admin/root privileges required.
+
+### 🪟 Windows (PowerShell)
+```powershell
+irm https://raw.githubusercontent.com/Dibij/Verya/master/scripts/install.ps1 | iex
+```
+*Installs to `%LOCALAPPDATA%\Programs\Verya` and configures your User PATH automatically.*
+
+### 🍎 macOS / 🐧 Linux (Terminal)
+```bash
+curl -fsSL https://raw.githubusercontent.com/Dibij/Verya/master/scripts/install.sh | bash
+```
+*Installs to `~/.local/share/verya` and creates launcher at `~/.local/bin/verya`.*
+
+Restart your terminal, and `verya` is ready!
 
 ---
 
-### 2. Clone and Build
+## Downloadable Release Packages
+
+You can also download packaged installers directly from the [GitHub Releases](https://github.com/Dibij/Verya/releases):
+
+| Platform | Download | Instructions |
+|---|---|---|
+| **Windows** | [`VeryaSetup.cmd`](https://github.com/Dibij/Verya/releases/latest/download/VeryaSetup.cmd) or [`.zip`](https://github.com/Dibij/Verya/releases/latest/download/verya-windows-x64.zip) | Double-click `VeryaSetup.cmd` or extract `.zip` and run `verya.cmd` |
+| **Linux (x64)** | [`verya-linux-x64.tar.gz`](https://github.com/Dibij/Verya/releases/latest/download/verya-linux-x64.tar.gz) | Extract and run `./verya` |
+| **Linux (ARM64)** | [`verya-linux-arm64.tar.gz`](https://github.com/Dibij/Verya/releases/latest/download/verya-linux-arm64.tar.gz) | Extract and run `./verya` |
+| **macOS (Intel)** | [`verya-macos-x64.tar.gz`](https://github.com/Dibij/Verya/releases/latest/download/verya-macos-x64.tar.gz) | Extract and run `./verya` |
+| **macOS (Apple Silicon)** | [`verya-macos-arm64.tar.gz`](https://github.com/Dibij/Verya/releases/latest/download/verya-macos-arm64.tar.gz) | Extract and run `./verya` |
+| **Checksums** | [`checksums.txt`](https://github.com/Dibij/Verya/releases/latest/download/checksums.txt) | SHA-256 hashes for all downloadable assets |
+
+---
+
+## Install from Source
+
+If you prefer building and linking locally:
 
 ```bash
 # Clone the repository
 git clone https://github.com/Dibij/Verya.git
 cd Verya
 
-# Install all workspace dependencies
+# Install dependencies & build
 npm install
-
-# Build all packages (UI, Server, CLI)
 npm run build
-```
 
----
-
-### 3. Adding `verya` to your System PATH
-
-To be able to open a terminal anywhere, navigate to any React project, and simply run `verya`, choose one of the following methods:
-
-#### Method A: Using `npm link` (Recommended — Easiest & Universal)
-
-From inside the cloned `Verya` repository root:
-
-```bash
+# Link globally (adds 'verya' to your PATH)
 npm link
 ```
 
-*What this does:* Registers `verya` into your global npm binary folder (e.g. `%APPDATA%\npm` on Windows or `/usr/local/bin` on macOS/Linux), which is already in your system's PATH.
-
-Now you can test it:
-```bash
-verya --version
-```
-
-To unlink later if needed:
-```bash
-npm unlink -g verya
-```
-
 ---
 
-#### Method B: Add directly to System PATH (Windows)
+## Using Verya
 
-If you prefer not to use `npm link`, you can add the Verya directory directly to your user PATH:
-
-**Using PowerShell (run as regular user):**
-```powershell
-# In PowerShell inside the Verya folder:
-$veryaPath = (Get-Item .).FullName
-$userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-if ($userPath -notlike "*$veryaPath*") {
-    [Environment]::SetEnvironmentVariable("Path", "$userPath;$veryaPath", "User")
-    Write-Host "Verya added to User PATH! Restart your terminal to use 'verya'." -ForegroundColor Green
-}
-```
-
-**Using the Windows GUI:**
-1. Press <kbd>Win</kbd> + <kbd>R</kbd>, type `sysdm.cpl`, and press **Enter**.
-2. Go to the **Advanced** tab and click **Environment Variables**.
-3. Under **User variables**, select **Path** and click **Edit**.
-4. Click **New** and paste the path to your Verya directory:
-   ```text
-   D:\Code\Verya
-   ```
-5. Click **OK** on all dialogs and restart your terminal.
-
----
-
-#### Method C: Add to PATH (macOS / Linux)
-
-Add Verya's directory to your shell profile:
-
-```bash
-# For zsh (default on macOS):
-echo 'export PATH="$PATH:'"$(pwd)"'"' >> ~/.zshrc
-source ~/.zshrc
-
-# For bash (Ubuntu / Debian / WSL):
-echo 'export PATH="$PATH:'"$(pwd)"'"' >> ~/.bashrc
-source ~/.bashrc
-```
-
----
-
-## Quick Start & Usage
-
-### 1. Launch on Current Directory
-Open any React + TypeScript project in your terminal:
+### 1. Launch in the Current Project
+Navigate to any React + TypeScript project and run:
 
 ```bash
 cd my-react-app
 verya
 ```
 
-### 2. Launch on a Specific Project Path
+### 2. Launch with a Specific Path
 ```bash
 verya ./projects/dashboard
 ```
 
-### 3. Useful CLI Options
+### 3. CLI Command Reference
 
-```bash
-# Display help and options
-verya --help
+```text
+Verya 0.1.0 — Visual editing for real code
 
-# List saved sessions for this project
-verya --list-sessions
+Usage:
+  verya [options] [path]
 
-# Resume a previous session by ID
-verya -s <session-id>
+Arguments:
+  path                Path to your React project (directory or entry file) (default: ".")
 
-# Run Verya on a custom port
-verya -p 4000
-
-# Start without opening browser automatically
-verya --no-open
+Options:
+  -v, --version       Output the installed Verya version
+  -p, --port <port>   Port for the Verya server (default: "3111")
+  -s, --session <id>  Resume a specific editing session
+  --list-sessions     List existing sessions for this project
+  --verbose           Show detailed debug and compiler output
+  --no-open           Do not open browser automatically
+  -h, --help          Display help for command
 ```
 
 ---
@@ -213,7 +176,7 @@ Verya creates an isolated workspace under `~/.verya/sessions/<session-id>/`.
 * **Code / Split View**: Switch between purely visual editing, split preview + code editor, or full code editing.
 
 ### Step 5: Save Session vs. Accept Changes
-* **Save Session**: Preserves your work in Verya's session storage so you can resume it tomorrow.
+* **Save Session**: Preserves your work in Verya's session storage so you can resume it tomorrow (`verya -s <id>`).
 * **Accept Changes**:
   1. Opens the **Review & Accept Changes** modal.
   2. Displays all modified files with unified line diffs (green additions / red removals).
@@ -231,21 +194,14 @@ verya/
 │   ├── cli/             # Global CLI entry point (commander.js, project detector, spawner)
 │   ├── server/          # Express + WebSocket, AST transformers, session manager, Vite proxy
 │   └── ui/              # Editor frontend (React + Tailwind CSS + Lucide + Zustand)
+├── scripts/
+│   ├── install.ps1      # Automated PowerShell installer (Windows)
+│   ├── install.sh       # Automated Shell installer (Linux & macOS)
+│   └── package-release.js # Distribution packaging & checksum generator
+├── VeryaSetup.cmd       # Double-clickable Windows setup launcher
 ├── package.json         # Workspace root
 └── tsconfig.base.json   # Shared TypeScript configuration
 ```
-
----
-
-## Roadmap
-
-| Phase | Milestone | Status |
-|---|---|---|
-| **Phase 1** | CLI launcher, Vite live preview, element selection, AST transforms, live HMR sync | ✅ Complete |
-| **Phase 2** | Project isolation, temporary sessions, diff review modal, external conflict detection, Glassmorphism preset | ✅ Complete |
-| **Phase 3** | Multi-preset design system library, drag-to-reorder flex/grid, Figma import tokens | 🚧 In Progress |
-| **Phase 4** | AI design assistant ("Make this card feel like a dark glass fitness dashboard") | 📋 Planned |
-| **Phase 5** | Vue & Svelte framework adapters | 📋 Planned |
 
 ---
 

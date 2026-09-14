@@ -15,6 +15,7 @@
     "build:server": "npm run build -w @verya/server",
     "build:cli": "npm run build -w @verya/cli",
     "build": "npm run build:ui && npm run build:server && npm run build:cli",
+    "package": "node scripts/package-release.js",
     "start": "node packages/cli/dist/index.js",
     "verya": "node packages/cli/dist/index.js",
     "lint": "eslint packages/*/src --ext .ts,.tsx"

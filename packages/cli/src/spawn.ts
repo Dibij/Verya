@@ -32,6 +32,7 @@ function waitForViteReady(
   cwd: string,
   viteBin: string,
   vitePort: number,
+  verbose = false,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const isNpx = viteBin === 'npx';
@@ -49,7 +50,9 @@ function waitForViteReady(
 
     const onData = (data: Buffer) => {
       const output = data.toString();
-      process.stdout.write(chalk.gray('[vite] ') + output);
+      if (verbose) {
+        process.stdout.write(chalk.gray('[vite] ') + output);
+      }
 
       if (
         !resolved &&
@@ -59,7 +62,7 @@ function waitForViteReady(
           output.includes('Network:'))
       ) {
         resolved = true;
-        setTimeout(() => resolve(), 600);
+        setTimeout(() => resolve(), 500);
       }
     };
 
@@ -76,7 +79,7 @@ function waitForViteReady(
     child.on('exit', (code) => {
       if (!resolved) {
         resolved = true;
-        reject(new Error(`Vite dev server exited with code ${code}`));
+        reject(new Error(`Preview server process exited with code ${code}`));
       }
     });
 
@@ -89,21 +92,23 @@ export async function spawnVeryaServer(
   requestedVeryaPort: number,
   openBrowser: boolean,
   resumeSessionId?: string,
+  verbose = false,
 ): Promise<void> {
-  // Phase 2: Create or resume isolated session
-  console.log(chalk.gray('Creating isolated session...'));
+  // Phase 2 & 3: Isolated Session
+  console.log(chalk.gray('Creating editing session...'));
   let session;
   if (resumeSessionId) {
     session = await sessionManager.getMetadata(resumeSessionId);
     if (!session) {
-      throw new Error(`Session with ID ${resumeSessionId} not found.`);
+      throw new Error(`Session with ID "${resumeSessionId}" was not found.`);
     }
-    console.log(chalk.cyan(`Resumed session: ${session.name} (${session.id})`));
+    console.log(chalk.green(`✓ Resumed session: ${chalk.white(session.name)}`));
   } else {
     session = await sessionManager.createSession(detected.originalRoot);
-    console.log(chalk.cyan(`Session created: ${session.name}`));
-    console.log(chalk.gray(`Session path:    ${session.sessionRoot}`));
-    console.log(chalk.gray(`Original project is protected and untouched.`));
+    console.log(chalk.green(`✓ Session created (isolated workspace)`));
+    if (verbose) {
+      console.log(chalk.gray(`  Location: ${session.sessionRoot}`));
+    }
   }
 
   // Find available ports
@@ -114,8 +119,9 @@ export async function spawnVeryaServer(
   // Use session directory as Vite root
   const viteBin = await getViteBin(detected.originalRoot);
 
-  console.log(chalk.yellow(`Starting Vite in isolated session on port ${vitePort}...`));
-  await waitForViteReady(session.sessionRoot, viteBin, vitePort);
+  console.log(chalk.gray('\nStarting preview...'));
+  await waitForViteReady(session.sessionRoot, viteBin, vitePort, verbose);
+  console.log(chalk.green(`✓ Preview ready`));
 
   // Compute entry file relative to session root
   const relEntry = path.relative(detected.originalRoot, detected.entryFile);
@@ -137,8 +143,9 @@ export async function spawnVeryaServer(
     previewUrl,
   };
 
-  console.log(chalk.green(`✔ Vite preview ready on ${previewUrl}`));
-  console.log(chalk.bold.hex('#6366f1')(`\nVerya Editor → http://localhost:${veryaPort}\n`));
+  console.log(chalk.gray('\nOpening Verya...'));
+  console.log(chalk.bold.hex('#6366f1')(`Ready → http://localhost:${veryaPort}\n`));
+  console.log(chalk.gray('Press Ctrl+C to stop Verya.\n'));
 
   await startServer(projectInfo, vitePort, veryaPort, previewPort);
 

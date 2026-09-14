@@ -1,6 +1,7 @@
 # ─── Project Spec (private) ──────────────────────────────────────────────────
 details.txt
 phase2_details.txt
+phase3_details.txt
 
 # ─── Dependencies ─────────────────────────────────────────────────────────────
 node_modules/
@@ -14,6 +15,7 @@ out/
 .next/
 .nuxt/
 .output/
+dist-release/
 
 # ─── Verya Runtime ────────────────────────────────────────────────────────────
 .verya/
