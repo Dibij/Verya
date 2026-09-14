@@ -22,8 +22,11 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
+    "eslint": "^9.9.0",
     "prettier": "^3.3.3",
-    "typescript": "^5.5.4",
-    "eslint": "^9.9.0"
+    "typescript": "^5.5.4"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.63.3"
   }
 }

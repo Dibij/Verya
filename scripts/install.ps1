@@ -71,10 +71,23 @@ if ((Test-Path (Join-Path $RepoRoot "package.json")) -and (Test-Path (Join-Path 
     }
 }
 
+# Ensure production dependencies exist in installation directory
+$cliCommander = Join-Path $InstallDir "node_modules\commander"
+if (-not (Test-Path $cliCommander)) {
+    Write-Host "Installing production dependencies in $InstallDir..." -ForegroundColor Gray
+    Push-Location $InstallDir
+    npm install --omit=dev
+    Pop-Location
+}
+
 # Create verya.cmd runner in InstallDir
 $cmdRunner = Join-Path $BinDir "verya.cmd"
 $cmdContent = @"
 @echo off
+if not exist "%~dp0\node_modules\commander" (
+  echo [Verya] Installing dependencies...
+  call npm install --omit=dev --prefix "%~dp0"
+)
 node "%~dp0\packages\cli\dist\index.js" %*
 "@
 Set-Content -Path $cmdRunner -Value $cmdContent -Encoding ASCII
@@ -82,6 +95,10 @@ Set-Content -Path $cmdRunner -Value $cmdContent -Encoding ASCII
 # Create verya.ps1 runner in InstallDir
 $ps1Runner = Join-Path $BinDir "verya.ps1"
 $ps1Content = @"
+if (-not (Test-Path "`$PSScriptRoot\node_modules\commander")) {
+  Write-Host "[Verya] Installing dependencies..." -ForegroundColor Cyan
+  npm install --omit=dev --prefix "`$PSScriptRoot"
+}
 & node "`$PSScriptRoot\packages\cli\dist\index.js" @args
 "@
 Set-Content -Path $ps1Runner -Value $ps1Content -Encoding UTF8

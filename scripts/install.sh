@@ -73,10 +73,20 @@ else
   fi
 fi
 
+# Ensure production dependencies exist in installation directory
+if [ ! -d "$INSTALL_DIR/node_modules" ] || [ ! -d "$INSTALL_DIR/node_modules/commander" ]; then
+  echo "Installing dependencies in $INSTALL_DIR..."
+  (cd "$INSTALL_DIR" && npm install --omit=dev)
+fi
+
 # Create verya launcher in ~/.local/bin
 cat << 'EOF' > "$BIN_DIR/verya"
 #!/usr/bin/env bash
 DIR="$HOME/.local/share/verya"
+if [ ! -d "$DIR/node_modules/commander" ]; then
+  echo "[Verya] Dependencies missing in $DIR, running npm install..."
+  (cd "$DIR" && npm install --omit=dev)
+fi
 exec node "$DIR/packages/cli/dist/index.js" "$@"
 EOF
 chmod +x "$BIN_DIR/verya"

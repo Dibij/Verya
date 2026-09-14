@@ -62,28 +62,68 @@ copyDir(path.join(rootDir, 'packages'), path.join(stageDir, 'packages'));
 copyDir(path.join(rootDir, 'scripts'), path.join(stageDir, 'scripts'));
 fs.copyFileSync(path.join(rootDir, 'VeryaSetup.cmd'), path.join(stageDir, 'VeryaSetup.cmd'));
 
-// Create runner scripts in stage
-const winCmd = `@echo off\nnode "%~dp0\\packages\\cli\\dist\\index.js" %*`;
+// Create runner scripts in stage with self-healing dependency check
+const winCmd = `@echo off
+if not exist "%~dp0\\node_modules\\commander" (
+  echo [Verya] Installing dependencies...
+  call npm install --omit=dev --prefix "%~dp0"
+)
+node "%~dp0\\packages\\cli\\dist\\index.js" %*`;
 fs.writeFileSync(path.join(stageDir, 'verya.cmd'), winCmd, 'utf-8');
 
-const winPs = `& node "$PSScriptRoot\\packages\\cli\\dist\\index.js" @args`;
+const winPs = `if (-not (Test-Path "$PSScriptRoot\\node_modules\\commander")) {
+  Write-Host "[Verya] Installing dependencies..." -ForegroundColor Cyan
+  npm install --omit=dev --prefix "$PSScriptRoot"
+}
+& node "$PSScriptRoot\\packages\\cli\\dist\\index.js" @args`;
 fs.writeFileSync(path.join(stageDir, 'verya.ps1'), winPs, 'utf-8');
 
-const unixSh = `#!/usr/bin/env bash\nDIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"\nexec node "$DIR/packages/cli/dist/index.js" "$@"`;
+const unixSh = `#!/usr/bin/env bash
+DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+if [ ! -d "$DIR/node_modules/commander" ]; then
+  echo "[Verya] Installing dependencies..."
+  (cd "$DIR" && npm install --omit=dev)
+fi
+exec node "$DIR/packages/cli/dist/index.js" "$@"`;
 fs.writeFileSync(path.join(stageDir, 'verya'), unixSh, 'utf-8');
 
 console.log('3. Packaging zip and tar archives...');
 
 // Create Windows zip
 const winZip = path.join(outDir, 'verya-windows-x64.zip');
-try {
-  // Use powershell Compress-Archive on Windows
-  execSync(`powershell -NoProfile -Command "Compress-Archive -Path '${stageDir}\\*' -DestinationPath '${winZip}' -Force"`, {
-    stdio: 'inherit',
-  });
-  console.log(`✓ Created: verya-windows-x64.zip`);
-} catch (err) {
-  console.warn(`Could not create zip via powershell: ${err}`);
+let zipCreated = false;
+
+// Try powershell / pwsh first if available (Windows/cross-platform PowerShell)
+for (const psCmd of ['powershell', 'pwsh']) {
+  try {
+    execSync(`${psCmd} -NoProfile -Command "Compress-Archive -Path '${stageDir}/*' -DestinationPath '${winZip}' -Force"`, {
+      stdio: 'ignore',
+    });
+    if (fs.existsSync(winZip)) {
+      console.log(`✓ Created: verya-windows-x64.zip (via ${psCmd})`);
+      zipCreated = true;
+      break;
+    }
+  } catch {
+    // Ignore and try next option
+  }
+}
+
+// Fallback to standard zip -r if powershell not available or failed
+if (!zipCreated) {
+  try {
+    execSync(`zip -r "${winZip}" .`, { cwd: stageDir, stdio: 'ignore' });
+    if (fs.existsSync(winZip)) {
+      console.log(`✓ Created: verya-windows-x64.zip (via zip -r)`);
+      zipCreated = true;
+    }
+  } catch (err) {
+    console.warn(`Could not create zip via zip command: ${err}`);
+  }
+}
+
+if (!zipCreated) {
+  console.error('⚠️ Warning: Failed to generate verya-windows-x64.zip');
 }
 
 // Copy standalone installer scripts to dist-release
