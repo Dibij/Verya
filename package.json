@@ -1,0 +1,28 @@
+{
+  "name": "verya",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Verya — Visual editing for real code.",
+  "bin": {
+    "verya": "./packages/cli/dist/index.js"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"server,ui\" -c \"cyan,magenta\" \"npm run dev -w @verya/server\" \"npm run dev -w @verya/ui\"",
+    "build:ui": "npm run build -w @verya/ui",
+    "build:server": "npm run build -w @verya/server",
+    "build:cli": "npm run build -w @verya/cli",
+    "build": "npm run build:ui && npm run build:server && npm run build:cli",
+    "start": "node packages/cli/dist/index.js",
+    "verya": "node packages/cli/dist/index.js",
+    "lint": "eslint packages/*/src --ext .ts,.tsx"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4",
+    "eslint": "^9.9.0"
+  }
+}

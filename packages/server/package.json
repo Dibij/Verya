@@ -1,0 +1,35 @@
+{
+  "name": "@verya/server",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && node scripts/copy-bridge.js",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "ws": "^8.18.0",
+    "http-proxy-middleware": "^3.0.2",
+    "@babel/parser": "^7.25.6",
+    "@babel/traverse": "^7.25.6",
+    "@babel/types": "^7.25.6",
+    "@babel/generator": "^7.25.6",
+    "prettier": "^3.3.3",
+    "chokidar": "^3.6.0",
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/ws": "^8.5.12",
+    "@types/babel__traverse": "^7.20.6",
+    "@types/babel__generator": "^7.6.8",
+    "@types/cors": "^2.8.17",
+    "@types/body-parser": "^1.19.5",
+    "@types/node": "^22.5.4",
+    "tsx": "^4.19.1",
+    "typescript": "^5.5.4"
+  }
+}
