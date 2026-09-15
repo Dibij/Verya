@@ -5,8 +5,9 @@ import path from 'path';
 import { detectProject } from './detect.js';
 import { spawnVeryaServer } from './spawn.js';
 import { sessionManager } from '@verya/server';
+import { checkForUpdates } from './updater.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.2';
 
 const BANNER = chalk.bold.hex('#6366f1')(`
  __   _____ ____  _   _   _   
@@ -27,7 +28,13 @@ program
   .option('--list-sessions', 'List existing sessions for this project')
   .option('--verbose', 'Show detailed debug and compiler output')
   .option('--no-open', 'Do not open browser automatically')
-  .action(async (projectPath: string, options: { port: string; session?: string; listSessions?: boolean; verbose?: boolean; open: boolean }) => {
+  .option('--no-update', 'Skip checking for newer Verya versions on startup')
+  .action(async (projectPath: string, options: { port: string; session?: string; listSessions?: boolean; verbose?: boolean; open: boolean; update: boolean }) => {
+    // 0. Auto-check for updates if running normal command
+    if (options.update !== false && !options.listSessions) {
+      await checkForUpdates(VERSION);
+    }
+
     // 1. Session listing mode
     const targetDir = path.resolve(projectPath);
 
