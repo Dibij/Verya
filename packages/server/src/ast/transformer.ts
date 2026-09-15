@@ -61,6 +61,30 @@ function elementMatchesSelector(
   return true;
 }
 
+const DIMENSION_PROPERTIES = new Set([
+  'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight',
+  'padding', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+  'margin', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft',
+  'top', 'left', 'right', 'bottom',
+  'fontSize', 'borderRadius', 'borderWidth', 'gap',
+  'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+  'letterSpacing',
+]);
+
+export function formatStyleValue(property: string, value: string, unit?: string): string {
+  if (!value || value === 'auto' || value === 'none' || value === 'inherit' || value === 'initial') {
+    return value;
+  }
+  const trimmed = String(value).trim();
+  if (unit && /^-?\d+(\.\d+)?$/.test(trimmed)) {
+    return `${trimmed}${unit}`;
+  }
+  if (DIMENSION_PROPERTIES.has(property) && /^-?\d+(\.\d+)?$/.test(trimmed)) {
+    return `${trimmed}px`;
+  }
+  return trimmed;
+}
+
 // ─── Inline Style Transformation ─────────────────────────────────────────────
 
 function camelToCSS(prop: string): string {
@@ -232,10 +256,11 @@ export async function applyTransform(
 
   // Apply each change
   for (const change of changes) {
+    const val = formatStyleValue(change.property, change.value, change.unit);
     if (useTailwind && !hasInlineStyle) {
-      applyTailwindClassChange(targetEl, change.property, change.value);
+      applyTailwindClassChange(targetEl, change.property, val);
     } else {
-      applyInlineStyleChange(targetEl, change.property, change.value);
+      applyInlineStyleChange(targetEl, change.property, val);
     }
   }
 

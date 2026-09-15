@@ -15,6 +15,8 @@ import {
   Check,
   Sun,
   Moon,
+  MousePointer,
+  Play,
 } from 'lucide-react'
 
 export const TopBar = () => {
@@ -33,6 +35,8 @@ export const TopBar = () => {
   const addTerminalLog = useStore((s) => s.addTerminalLog)
   const theme = useStore((s) => s.theme)
   const toggleTheme = useStore((s) => s.toggleTheme)
+  const interactMode = useStore((s) => s.interactMode)
+  const setInteractMode = useStore((s) => s.setInteractMode)
 
   const [savingSession, setSavingSession] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
@@ -139,6 +143,28 @@ export const TopBar = () => {
           >
             <Code2 className="w-3.5 h-3.5" />
             <span>Code</span>
+          </button>
+        </div>
+
+        {/* Interaction Mode: Edit (Inspect & Style) vs Interact (Click buttons & test app) */}
+        <div className="flex items-center p-0.5 rounded-lg border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border-muted)' }}>
+          <button
+            onClick={() => setInteractMode(false)}
+            title="Edit Mode: Click any element in preview to select and edit properties (or hold Alt to click directly)"
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition ${!interactMode ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-medium' : 'hover:text-white'}`}
+            style={{ color: !interactMode ? undefined : 'var(--text-muted)' }}
+          >
+            <MousePointer className="w-3.5 h-3.5" />
+            <span>Edit</span>
+          </button>
+          <button
+            onClick={() => setInteractMode(true)}
+            title="Interact Mode: Click buttons, enter text, and use your app live"
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition ${interactMode ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 font-medium' : 'hover:text-white'}`}
+            style={{ color: interactMode ? undefined : 'var(--text-muted)' }}
+          >
+            <Play className="w-3.5 h-3.5" />
+            <span>Interact</span>
           </button>
         </div>
       </div>

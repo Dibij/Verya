@@ -22,6 +22,11 @@ interface VeryaStore {
   // Selection
   selectedElement: ElementInfo | null
   setSelectedElement: (el: ElementInfo | null) => void
+  updateSelectedElementStyle: (property: string, value: string) => void
+
+  // Interact Mode (allows clicking buttons and interacting with preview app)
+  interactMode: boolean
+  setInteractMode: (mode: boolean) => void
 
   // Component tree & Files
   componentTree: ComponentNode[]
@@ -85,6 +90,22 @@ export const useStore = create<VeryaStore>((set) => ({
   // Selection
   selectedElement: null,
   setSelectedElement: (selectedElement) => set({ selectedElement }),
+  updateSelectedElementStyle: (property, value) =>
+    set((state) => {
+      if (!state.selectedElement) return state
+      return {
+        selectedElement: {
+          ...state.selectedElement,
+          computedStyle: {
+            ...state.selectedElement.computedStyle,
+            [property]: value,
+          },
+        },
+      }
+    }),
+
+  interactMode: false,
+  setInteractMode: (interactMode) => set({ interactMode }),
 
   // Component tree & Files
   componentTree: [],

@@ -16,6 +16,7 @@ function buildSelector(el: ElementInfo) {
     tagName: el.tagName,
     className: el.className ? el.className.split(' ')[0] : undefined,
     componentName: el.componentName ?? undefined,
+    index: el.index,
   }
 }
 
@@ -23,9 +24,19 @@ function useTransform() {
   const project = useStore((s) => s.project)
   const componentTree = useStore((s) => s.componentTree)
   const selectedElement = useStore((s) => s.selectedElement)
+  const updateSelectedElementStyle = useStore((s) => s.updateSelectedElementStyle)
 
   return async (property: string, value: string, unit?: string) => {
     if (!selectedElement || !project) return
+
+    let finalValue = value
+    if (unit && !finalValue.endsWith(unit) && /^-?\d+(\.\d+)?$/.test(finalValue.trim())) {
+      finalValue = `${finalValue.trim()}${unit}`
+    }
+
+    // Optimistically update store state so UI inputs reflect change immediately
+    updateSelectedElementStyle(property, finalValue)
+
     // Try to find the file from componentTree first, fall back to entryFile
     let file = project.entryFile
     if (selectedElement.componentName) {
@@ -36,7 +47,7 @@ function useTransform() {
     const req: TransformRequest = {
       file,
       selector: buildSelector(selectedElement),
-      changes: [{ property, value, unit }],
+      changes: [{ property, value: finalValue, unit }],
     }
     const result = await api.transform(req)
     if (!result.success) {
@@ -44,6 +55,14 @@ function useTransform() {
     }
   }
 }
+
+const POSITION_OPTIONS = [
+  { value: 'static', label: 'static' },
+  { value: 'relative', label: 'relative' },
+  { value: 'absolute', label: 'absolute' },
+  { value: 'fixed', label: 'fixed' },
+  { value: 'sticky', label: 'sticky' },
+]
 
 const DISPLAY_OPTIONS = [
   { value: 'block', label: 'block' },
@@ -169,6 +188,43 @@ export function LayoutSection() {
         </div>
       </Section>
 
+      <Section title="Position & Location">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <Label>Position</Label>
+          <Select
+            value={cs.position || 'static'}
+            onChange={(v) => transform('position', v)}
+            options={POSITION_OPTIONS}
+            style={{ flex: 1 }}
+          />
+        </div>
+
+        {cs.position && cs.position !== 'static' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Coordinates</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+              {[
+                { label: 'Top', prop: 'top', val: cs.top },
+                { label: 'Left', prop: 'left', val: cs.left },
+                { label: 'Right', prop: 'right', val: cs.right },
+                { label: 'Bottom', prop: 'bottom', val: cs.bottom },
+              ].map(({ label, prop, val }) => (
+                <div key={prop} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', width: '22px' }}>{label[0]}</span>
+                  <Input
+                    type="number"
+                    value={parsePx(val) || '0'}
+                    onChange={(v) => transform(prop, v, 'px')}
+                    suffix="px"
+                    style={{ flex: 1 }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Section>
+
       <Section title="Spacing">
         <div style={{ marginBottom: '6px' }}>
           <div
@@ -179,7 +235,7 @@ export function LayoutSection() {
               marginBottom: '4px',
             }}
           >
-            <span style={{ fontSize: '10px', color: '#3D4357', width: '48px' }}>Padding</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', width: '48px' }}>Padding</span>
             {[
               { label: 'T', prop: 'paddingTop', val: cs.paddingTop },
               { label: 'R', prop: 'paddingRight', val: cs.paddingRight },
@@ -187,7 +243,7 @@ export function LayoutSection() {
               { label: 'L', prop: 'paddingLeft', val: cs.paddingLeft },
             ].map(({ label, prop, val }) => (
               <div key={prop} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                <span style={{ fontSize: '9px', color: '#3D4357' }}>{label}</span>
+                <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{label}</span>
                 <Input
                   type="number"
                   value={parsePx(val) || '0'}
@@ -198,7 +254,7 @@ export function LayoutSection() {
             ))}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '10px', color: '#3D4357', width: '48px' }}>Margin</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', width: '48px' }}>Margin</span>
             {[
               { label: 'T', prop: 'marginTop', val: cs.marginTop },
               { label: 'R', prop: 'marginRight', val: cs.marginRight },
@@ -206,7 +262,7 @@ export function LayoutSection() {
               { label: 'L', prop: 'marginLeft', val: cs.marginLeft },
             ].map(({ label, prop, val }) => (
               <div key={prop} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                <span style={{ fontSize: '9px', color: '#3D4357' }}>{label}</span>
+                <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{label}</span>
                 <Input
                   type="number"
                   value={parsePx(val) || '0'}

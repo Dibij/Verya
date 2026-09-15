@@ -72,6 +72,31 @@
   var currentHover = null;
   var currentSelection = null;
   var selRect = null;
+  var interactMode = false;
+
+  // ─── Theme Style Injection ───────────────────────────────────────────────
+  var themeStyle = document.createElement('style');
+  themeStyle.id = '__verya_theme_style__';
+  themeStyle.textContent = 
+    'html.light, html.light body { background-color: #ffffff; color: #111827; }\n' +
+    'html.dark, html.dark body { background-color: #0b0d13; color: #E8EAF0; }';
+  if (document.head) {
+    document.head.appendChild(themeStyle);
+  } else {
+    document.addEventListener('DOMContentLoaded', function () {
+      document.head.appendChild(themeStyle);
+    });
+  }
+
+  function applyTheme(theme) {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    }
+  }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
   function isVeryaEl(el) {
@@ -123,11 +148,23 @@
     var cs = window.getComputedStyle(el);
     var componentName = getReactComponentName(el);
 
+    // Compute index among siblings of same tag inside root
+    var container = document.getElementById('root') || document.body;
+    var allOfTag = container.getElementsByTagName(el.tagName);
+    var tagIndex = 0;
+    for (var i = 0; i < allOfTag.length; i++) {
+      if (allOfTag[i] === el) {
+        tagIndex = i;
+        break;
+      }
+    }
+
     return {
       tagName: el.tagName.toLowerCase(),
       id: el.id || '',
       className: el.className || '',
       componentName: componentName,
+      index: tagIndex,
       rect: {
         top: rect.top,
         left: rect.left,
@@ -179,6 +216,7 @@
 
   // ─── Mouse over ───────────────────────────────────────────────────────────
   document.addEventListener('mouseover', function (e) {
+    if (interactMode) return;
     var target = e.target;
     if (!target || isVeryaEl(target) || target === document.body || target === document.documentElement) {
       hoverBox.style.display = 'none';
@@ -192,6 +230,7 @@
   }, true);
 
   document.addEventListener('mouseout', function (e) {
+    if (interactMode) return;
     if (!e.relatedTarget || e.relatedTarget === document.body) {
       hoverBox.style.display = 'none';
     }
@@ -199,6 +238,9 @@
 
   // ─── Click ────────────────────────────────────────────────────────────────
   document.addEventListener('click', function (e) {
+    // In interact mode or when holding Alt/Option key, allow full native interaction (buttons, inputs, links)
+    if (interactMode || e.altKey) return;
+
     var target = e.target;
     if (!target || isVeryaEl(target) || target === document.body || target === document.documentElement) return;
 
@@ -228,16 +270,28 @@
       selLabel.style.display = 'none';
       currentSelection = null;
       selRect = null;
+    } else if (e.data.type === 'VERYA_MODE') {
+      interactMode = e.data.mode === 'interact';
+      if (interactMode) {
+        hoverBox.style.display = 'none';
+        selBox.style.display = 'none';
+        selLabel.style.display = 'none';
+      } else if (currentSelection) {
+        selBox.style.display = 'block';
+        selLabel.style.display = 'block';
+      }
+    } else if (e.data.type === 'VERYA_THEME') {
+      applyTheme(e.data.theme);
     }
   });
 
-  // ─── Update positions on scroll/resize ───────────────────────────────────
+  // ─── Update positions on scroll/resize/mutation ───────────────────────────
   function updatePositions() {
-    if (currentHover) {
+    if (currentHover && !interactMode) {
       var hr = currentHover.getBoundingClientRect();
       positionBox(hoverBox, hr);
     }
-    if (currentSelection) {
+    if (currentSelection && !interactMode) {
       var sr = currentSelection.getBoundingClientRect();
       selRect = sr;
       positionBox(selBox, sr);
@@ -249,4 +303,17 @@
 
   window.addEventListener('scroll', updatePositions, true);
   window.addEventListener('resize', updatePositions);
+
+  if (window.MutationObserver) {
+    var observer = new MutationObserver(function () {
+      updatePositions();
+    });
+    if (document.body) {
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+    } else {
+      document.addEventListener('DOMContentLoaded', function () {
+        observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+      });
+    }
+  }
 })();

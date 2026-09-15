@@ -67,6 +67,7 @@ export interface ElementInfo {
   id: string;
   className: string;
   componentName: string | null;
+  index?: number;
   rect: { top: number; left: number; width: number; height: number };
   computedStyle: {
     display: string; width: string; height: string;
