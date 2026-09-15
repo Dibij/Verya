@@ -7,7 +7,7 @@ import { spawnVeryaServer } from './spawn.js';
 import { sessionManager } from '@verya/server';
 import { checkForUpdates } from './updater.js';
 
-const VERSION = '0.2.4';
+const VERSION = '0.2.5';
 
 const BANNER = chalk.bold.hex('#6366f1')(`
  __   _____ ____  _   _   _   
