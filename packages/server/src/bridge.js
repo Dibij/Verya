@@ -200,7 +200,7 @@
   // ─── Click ────────────────────────────────────────────────────────────────
   document.addEventListener('click', function (e) {
     var target = e.target;
-    if (!target || isVeryaEl(target)) return;
+    if (!target || isVeryaEl(target) || target === document.body || target === document.documentElement) return;
 
     e.preventDefault();
     e.stopPropagation();

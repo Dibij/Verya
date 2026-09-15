@@ -27,12 +27,12 @@ export function PropertiesPanel() {
     : []
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', color: 'var(--text-primary)' }}>
       {/* Element header */}
       <div
         style={{
           padding: '12px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
+          borderBottom: '1px solid var(--border-subtle)',
           flexShrink: 0,
         }}
       >
@@ -50,7 +50,7 @@ export function PropertiesPanel() {
             style={{
               fontSize: '13px',
               fontWeight: 600,
-              color: '#E8EAF0',
+              color: 'var(--text-primary)',
               fontFamily: 'monospace',
             }}
           >

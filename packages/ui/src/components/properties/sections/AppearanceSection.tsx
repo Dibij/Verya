@@ -93,7 +93,7 @@ export function AppearanceSection() {
           onChange={(v) => transform('borderColor', v)}
         />
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '11px', color: '#6B7585', width: '64px', flexShrink: 0 }}>Width</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', width: '64px', flexShrink: 0 }}>Width</span>
           <Input
             type="number"
             value={borderWidth}
@@ -117,7 +117,7 @@ export function AppearanceSection() {
 
       <Section title="Shadow">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '11px', color: '#6B7585', width: '64px', flexShrink: 0 }}>Shadow</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', width: '64px', flexShrink: 0 }}>Shadow</span>
           <select
             value={
               SHADOW_OPTIONS.find((o) => o.value === cs.boxShadow)?.value ?? 'none'
@@ -125,10 +125,10 @@ export function AppearanceSection() {
             onChange={(e) => transform('boxShadow', e.target.value)}
             style={{
               flex: 1,
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
               borderRadius: '6px',
-              color: '#E8EAF0',
+              color: 'var(--text-primary)',
               fontSize: '12px',
               height: '28px',
               padding: '0 8px',
@@ -137,7 +137,7 @@ export function AppearanceSection() {
             }}
           >
             {SHADOW_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value} style={{ background: '#1A1D26' }}>
+              <option key={opt.value} value={opt.value} style={{ background: 'var(--bg-panel)' }}>
                 {opt.label}
               </option>
             ))}

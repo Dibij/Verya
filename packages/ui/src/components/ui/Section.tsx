@@ -14,7 +14,7 @@ export function Section({ title, children }: SectionProps) {
             fontSize: '10px',
             fontWeight: 600,
             letterSpacing: '0.08em',
-            color: '#3D4357',
+            color: 'var(--text-muted)',
             textTransform: 'uppercase',
           }}
         >
@@ -24,7 +24,7 @@ export function Section({ title, children }: SectionProps) {
           style={{
             flex: 1,
             height: '1px',
-            background: 'rgba(255,255,255,0.05)',
+            background: 'var(--border-subtle)',
           }}
         />
       </div>

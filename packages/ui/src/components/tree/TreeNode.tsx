@@ -40,7 +40,7 @@ export function TreeNode({ node, depth, selectedName }: TreeNodeProps) {
         onMouseEnter={(e) => {
           if (!isSelected) {
             ;(e.currentTarget as HTMLDivElement).style.background =
-              'rgba(255,255,255,0.03)'
+              'var(--bg-surface)'
           }
         }}
         onMouseLeave={(e) => {
@@ -60,7 +60,7 @@ export function TreeNode({ node, depth, selectedName }: TreeNodeProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#3D4357',
+            color: 'var(--text-faint)',
             marginRight: '4px',
             flexShrink: 0,
           }}
@@ -90,7 +90,7 @@ export function TreeNode({ node, depth, selectedName }: TreeNodeProps) {
         <span
           style={{
             fontSize: '12px',
-            color: isSelected ? '#E8EAF0' : '#B0B5C0',
+            color: isSelected ? 'var(--text-primary)' : 'var(--text-muted)',
             fontFamily: isReactComponent ? 'inherit' : 'monospace',
             fontWeight: isSelected ? 500 : 400,
             flex: 1,
@@ -107,7 +107,7 @@ export function TreeNode({ node, depth, selectedName }: TreeNodeProps) {
           <span
             style={{
               fontSize: '9px',
-              color: '#3D4357',
+              color: 'var(--text-faint)',
               fontFamily: 'monospace',
               flexShrink: 0,
               marginLeft: '4px',
@@ -125,7 +125,7 @@ export function TreeNode({ node, depth, selectedName }: TreeNodeProps) {
         <span
           style={{
             fontSize: '9px',
-            color: '#3D4357',
+            color: 'var(--text-faint)',
             flexShrink: 0,
             marginLeft: '6px',
           }}

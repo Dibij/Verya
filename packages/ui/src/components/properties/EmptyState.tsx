@@ -32,7 +32,7 @@ export function EmptyState() {
         <p
           style={{
             fontSize: '13px',
-            color: '#6B7585',
+            color: 'var(--text-muted)',
             margin: '0 0 6px 0',
             fontWeight: 500,
           }}
@@ -42,7 +42,7 @@ export function EmptyState() {
         <p
           style={{
             fontSize: '11px',
-            color: '#3D4357',
+            color: 'var(--text-faint)',
             margin: 0,
             lineHeight: 1.6,
           }}

@@ -16,10 +16,10 @@ export function Select({ value, onChange, options, style }: SelectProps) {
       value={value}
       onChange={(e) => onChange(e.target.value)}
       style={{
-        background: 'rgba(255,255,255,0.05)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border-subtle)',
         borderRadius: '6px',
-        color: '#E8EAF0',
+        color: 'var(--text-primary)',
         fontSize: '12px',
         height: '28px',
         padding: '0 24px 0 8px',
@@ -38,7 +38,7 @@ export function Select({ value, onChange, options, style }: SelectProps) {
         <option
           key={opt.value}
           value={opt.value}
-          style={{ background: '#1A1D26', color: '#E8EAF0' }}
+          style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
         >
           {opt.label}
         </option>
