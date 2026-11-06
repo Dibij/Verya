@@ -18,7 +18,17 @@
     'pointer-events:none',
     'z-index:2147483647',
   ].join(';');
-  document.body.appendChild(overlay);
+
+  function attachOverlay() {
+    var host = document.documentElement || document.body;
+    if (host && !overlay.parentNode) {
+      host.appendChild(overlay);
+    }
+  }
+  attachOverlay();
+  if (!overlay.parentNode) {
+    document.addEventListener('DOMContentLoaded', attachOverlay);
+  }
 
   // ─── Hover box ────────────────────────────────────────────────────────────
   var hoverBox = document.createElement('div');
@@ -71,6 +81,7 @@
   // ─── State ────────────────────────────────────────────────────────────────
   var currentHover = null;
   var currentSelection = null;
+  var selectedComponentName = null;
   var selRect = null;
   var interactMode = false;
 
@@ -80,12 +91,16 @@
   themeStyle.textContent = 
     'html.light, html.light body { background-color: #ffffff; color: #111827; }\n' +
     'html.dark, html.dark body { background-color: #0b0d13; color: #E8EAF0; }';
-  if (document.head) {
-    document.head.appendChild(themeStyle);
-  } else {
-    document.addEventListener('DOMContentLoaded', function () {
-      document.head.appendChild(themeStyle);
-    });
+
+  function attachThemeStyle() {
+    var host = document.head || document.documentElement || document.body;
+    if (host && !themeStyle.parentNode) {
+      host.appendChild(themeStyle);
+    }
+  }
+  attachThemeStyle();
+  if (!themeStyle.parentNode) {
+    document.addEventListener('DOMContentLoaded', attachThemeStyle);
   }
 
   function applyTheme(theme) {
@@ -100,22 +115,33 @@
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
   function isVeryaEl(el) {
-    return overlay.contains(el) || el === overlay;
+    if (!el) return false;
+    var node = el.nodeType === 1 ? el : el.parentElement;
+    if (!node) return false;
+    return overlay.contains(node) || node === overlay || node === themeStyle;
   }
 
   function positionBox(box, rect) {
-    box.style.top = rect.top + 'px';
-    box.style.left = rect.left + 'px';
-    box.style.width = rect.width + 'px';
-    box.style.height = rect.height + 'px';
+    var top = rect.top + 'px';
+    var left = rect.left + 'px';
+    var width = rect.width + 'px';
+    var height = rect.height + 'px';
+    if (box.style.top !== top) box.style.top = top;
+    if (box.style.left !== left) box.style.left = left;
+    if (box.style.width !== width) box.style.width = width;
+    if (box.style.height !== height) box.style.height = height;
   }
 
   function positionLabel(rect, text) {
-    selLabel.textContent = text;
+    if (selLabel.textContent !== text) {
+      selLabel.textContent = text;
+    }
     var labelTop = rect.top - 22;
     if (labelTop < 4) labelTop = rect.top + 4;
-    selLabel.style.top = labelTop + 'px';
-    selLabel.style.left = rect.left + 'px';
+    var top = labelTop + 'px';
+    var left = rect.left + 'px';
+    if (selLabel.style.top !== top) selLabel.style.top = top;
+    if (selLabel.style.left !== left) selLabel.style.left = left;
   }
 
   // ─── React Fiber introspection ────────────────────────────────────────────
@@ -149,13 +175,15 @@
     var componentName = getReactComponentName(el);
 
     // Compute index among siblings of same tag inside root
-    var container = document.getElementById('root') || document.body;
-    var allOfTag = container.getElementsByTagName(el.tagName);
+    var container = document.getElementById('root') || document.body || document.documentElement;
     var tagIndex = 0;
-    for (var i = 0; i < allOfTag.length; i++) {
-      if (allOfTag[i] === el) {
-        tagIndex = i;
-        break;
+    if (container && container.getElementsByTagName) {
+      var allOfTag = container.getElementsByTagName(el.tagName);
+      for (var i = 0; i < allOfTag.length; i++) {
+        if (allOfTag[i] === el) {
+          tagIndex = i;
+          break;
+        }
       }
     }
 
@@ -231,8 +259,9 @@
 
   document.addEventListener('mouseout', function (e) {
     if (interactMode) return;
-    if (!e.relatedTarget || e.relatedTarget === document.body) {
+    if (!e.relatedTarget || e.relatedTarget === document.body || e.relatedTarget === document.documentElement) {
       hoverBox.style.display = 'none';
+      currentHover = null;
     }
   }, true);
 
@@ -251,11 +280,13 @@
     var rect = target.getBoundingClientRect();
     selRect = rect;
 
+    var info = collectElementInfo(target);
+    selectedComponentName = info.componentName;
+    var labelText = (info.componentName ? info.componentName + ' / ' : '') + info.tagName;
+
     positionBox(selBox, rect);
     selBox.style.display = 'block';
 
-    var info = collectElementInfo(target);
-    var labelText = (info.componentName ? info.componentName + ' / ' : '') + info.tagName;
     positionLabel(rect, labelText);
     selLabel.style.display = 'block';
 
@@ -269,6 +300,7 @@
       selBox.style.display = 'none';
       selLabel.style.display = 'none';
       currentSelection = null;
+      selectedComponentName = null;
       selRect = null;
     } else if (e.data.type === 'VERYA_MODE') {
       interactMode = e.data.mode === 'interact';
@@ -276,7 +308,7 @@
         hoverBox.style.display = 'none';
         selBox.style.display = 'none';
         selLabel.style.display = 'none';
-      } else if (currentSelection) {
+      } else if (currentSelection && document.contains(currentSelection)) {
         selBox.style.display = 'block';
         selLabel.style.display = 'block';
       }
@@ -287,33 +319,81 @@
 
   // ─── Update positions on scroll/resize/mutation ───────────────────────────
   function updatePositions() {
-    if (currentHover && !interactMode) {
-      var hr = currentHover.getBoundingClientRect();
-      positionBox(hoverBox, hr);
+    if (interactMode) return;
+
+    if (currentHover) {
+      if (!document.contains(currentHover)) {
+        currentHover = null;
+        hoverBox.style.display = 'none';
+      } else {
+        var hr = currentHover.getBoundingClientRect();
+        positionBox(hoverBox, hr);
+      }
     }
-    if (currentSelection && !interactMode) {
-      var sr = currentSelection.getBoundingClientRect();
-      selRect = sr;
-      positionBox(selBox, sr);
-      var info = collectElementInfo(currentSelection);
-      var labelText = (info.componentName ? info.componentName + ' / ' : '') + info.tagName;
-      positionLabel(sr, labelText);
+
+    if (currentSelection) {
+      if (!document.contains(currentSelection)) {
+        currentSelection = null;
+        selectedComponentName = null;
+        selRect = null;
+        selBox.style.display = 'none';
+        selLabel.style.display = 'none';
+      } else {
+        var sr = currentSelection.getBoundingClientRect();
+        selRect = sr;
+        positionBox(selBox, sr);
+        var labelText = (selectedComponentName ? selectedComponentName + ' / ' : '') + currentSelection.tagName.toLowerCase();
+        positionLabel(sr, labelText);
+      }
     }
   }
 
-  window.addEventListener('scroll', updatePositions, true);
-  window.addEventListener('resize', updatePositions);
-
-  if (window.MutationObserver) {
-    var observer = new MutationObserver(function () {
+  var updatePending = false;
+  function scheduleUpdate() {
+    if (updatePending) return;
+    updatePending = true;
+    requestAnimationFrame(function () {
+      updatePending = false;
       updatePositions();
     });
+  }
+
+  window.addEventListener('scroll', scheduleUpdate, true);
+  window.addEventListener('resize', scheduleUpdate);
+
+  if (window.MutationObserver) {
+    var observer = new MutationObserver(function (mutations) {
+      if (interactMode || (!currentHover && !currentSelection)) return;
+
+      var hasExternal = false;
+      for (var i = 0; i < mutations.length; i++) {
+        var target = mutations[i].target;
+        if (!isVeryaEl(target)) {
+          hasExternal = true;
+          break;
+        }
+      }
+      if (!hasExternal) return;
+
+      scheduleUpdate();
+    });
+
+    function attachObserver() {
+      var targetNode = document.body || document.documentElement;
+      if (targetNode) {
+        observer.observe(targetNode, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['style', 'class', 'hidden'],
+        });
+      }
+    }
+
     if (document.body) {
-      observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+      attachObserver();
     } else {
-      document.addEventListener('DOMContentLoaded', function () {
-        observer.observe(document.body, { childList: true, subtree: true, attributes: true });
-      });
+      document.addEventListener('DOMContentLoaded', attachObserver);
     }
   }
 })();

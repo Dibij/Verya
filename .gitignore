@@ -60,3 +60,13 @@ coverage/
 .cache/
 tmp/
 temp/
+
+# Safety ignores for migration
+.env.*
+!.env.example
+*.env
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc

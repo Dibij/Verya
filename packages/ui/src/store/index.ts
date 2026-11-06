@@ -122,7 +122,12 @@ export const useStore = create<VeryaStore>((set) => ({
     '✓ Live preview connected',
   ],
   addTerminalLog: (log) =>
-    set((state) => ({ terminalLogs: [...state.terminalLogs, log] })),
+    set((state) => ({
+      terminalLogs:
+        state.terminalLogs.length > 500
+          ? [...state.terminalLogs.slice(-499), log]
+          : [...state.terminalLogs, log],
+    })),
 
   // Changed files
   changedFiles: [],
