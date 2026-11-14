@@ -5,10 +5,11 @@ const traverse = ((_traverse as any).default || _traverse) as any;
 const generate = ((_generate as any).default || _generate) as any;
 import * as t from '@babel/types';
 import fs from 'fs/promises';
-import type { TransformRequest, ProjectInfo } from '../types.js';
+import type { TransformRequest, ProjectInfo, SourceLocation } from '../types.js';
+import { resolveWithin } from '../lib/safePath.js';
 import { parseFile } from './parser.js';
 import { formatCode } from './formatter.js';
-import { transformTailwindClass } from './tailwind.js';
+import { transformTailwindClass, canMapToTailwind } from './tailwind.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -43,24 +44,6 @@ function getTagName(node: t.JSXOpeningElement): string {
   return '';
 }
 
-function elementMatchesSelector(
-  node: t.JSXOpeningElement,
-  selector: TransformRequest['selector'],
-): boolean {
-  const tagName = getTagName(node);
-  if (tagName.toLowerCase() !== selector.tagName.toLowerCase()) return false;
-
-  if (selector.className) {
-    const className = getClassName(node);
-    const selectorTokens = selector.className.split(/\s+/).filter(Boolean);
-    const elementTokens = className.split(/\s+/).filter(Boolean);
-    const matches = selectorTokens.every((tok) => elementTokens.includes(tok));
-    if (!matches) return false;
-  }
-
-  return true;
-}
-
 const DIMENSION_PROPERTIES = new Set([
   'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight',
   'padding', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
@@ -87,8 +70,39 @@ export function formatStyleValue(property: string, value: string, unit?: string)
 
 // ─── Inline Style Transformation ─────────────────────────────────────────────
 
-function camelToCSS(prop: string): string {
-  return prop.replace(/([A-Z])/g, '-$1').toLowerCase();
+function findStyleAttr(openingEl: t.JSXOpeningElement): t.JSXAttribute | undefined {
+  for (const attr of openingEl.attributes) {
+    if (t.isJSXAttribute(attr) && t.isJSXIdentifier(attr.name, { name: 'style' })) {
+      return attr;
+    }
+  }
+  return undefined;
+}
+
+function styleObjectOf(
+  styleAttr: t.JSXAttribute | undefined,
+): t.ObjectExpression | null {
+  if (
+    styleAttr &&
+    t.isJSXExpressionContainer(styleAttr.value) &&
+    t.isObjectExpression(styleAttr.value.expression)
+  ) {
+    return styleAttr.value.expression;
+  }
+  return null;
+}
+
+function propertyKeyOf(prop: t.ObjectProperty | t.ObjectMethod): string | null {
+  if (t.isIdentifier(prop.key)) return prop.key.name;
+  if (t.isStringLiteral(prop.key)) return prop.key.value;
+  return null;
+}
+
+function makeStyleValue(property: string, value: string): t.Expression {
+  if (property === 'opacity' && /^-?\d+(\.\d+)?$/.test(value.trim())) {
+    return t.numericLiteral(parseFloat(value));
+  }
+  return t.stringLiteral(value);
 }
 
 function applyInlineStyleChange(
@@ -96,62 +110,51 @@ function applyInlineStyleChange(
   property: string,
   value: string,
 ): void {
-  // Find existing style attribute
-  let styleAttr: t.JSXAttribute | undefined;
-  for (const attr of openingEl.attributes) {
-    if (t.isJSXAttribute(attr) && t.isJSXIdentifier(attr.name, { name: 'style' })) {
-      styleAttr = attr;
-      break;
-    }
-  }
+  const styleAttr = findStyleAttr(openingEl);
 
   if (!styleAttr) {
-    // Create new style attribute: style={{ property: "value" }}
     const objExpr = t.objectExpression([
-      t.objectProperty(t.identifier(property), t.stringLiteral(value)),
+      t.objectProperty(t.identifier(property), makeStyleValue(property, value)),
     ]);
-    const newAttr = t.jsxAttribute(
-      t.jsxIdentifier('style'),
-      t.jsxExpressionContainer(objExpr),
+    openingEl.attributes.push(
+      t.jsxAttribute(t.jsxIdentifier('style'), t.jsxExpressionContainer(objExpr)),
     );
-    openingEl.attributes.push(newAttr);
     return;
   }
 
-  // style attribute exists — get object expression
-  if (
-    !t.isJSXExpressionContainer(styleAttr.value) ||
-    !t.isObjectExpression(styleAttr.value.expression)
-  ) {
-    // Can't handle non-object style (e.g. style={myStyles}) — create/replace
-    const objExpr = t.objectExpression([
-      t.objectProperty(t.identifier(property), t.stringLiteral(value)),
-    ]);
-    styleAttr.value = t.jsxExpressionContainer(objExpr);
-    return;
-  }
-
-  const objExpr = styleAttr.value.expression;
-
-  // Look for existing property
-  for (const prop of objExpr.properties) {
-    if (t.isObjectProperty(prop)) {
-      const keyName = t.isIdentifier(prop.key)
-        ? prop.key.name
-        : t.isStringLiteral(prop.key)
-          ? prop.key.value
-          : null;
-      if (keyName === property) {
-        // Update existing value
-        prop.value = t.stringLiteral(value);
-        return;
-      }
+  const objExpr = styleObjectOf(styleAttr);
+  if (!objExpr) {
+    // style={myStyles} — we cannot safely merge, so replace with an explicit object
+    // that preserves the original expression via a spread.
+    const original = t.isJSXExpressionContainer(styleAttr.value)
+      ? styleAttr.value.expression
+      : null;
+    const props: Array<t.ObjectProperty | t.SpreadElement> = [];
+    if (original && !t.isJSXEmptyExpression(original)) {
+      props.push(t.spreadElement(original));
     }
+    props.push(t.objectProperty(t.identifier(property), makeStyleValue(property, value)));
+    styleAttr.value = t.jsxExpressionContainer(t.objectExpression(props));
+    return;
   }
 
-  // Property not found — add it
+  for (const prop of objExpr.properties) {
+    if (!t.isObjectProperty(prop) && !t.isObjectMethod(prop)) continue;
+    if (propertyKeyOf(prop) !== property) continue;
+    if (t.isObjectProperty(prop)) {
+      prop.value = makeStyleValue(property, value);
+    } else {
+      // Object method shorthand is not valid for a style value.
+      objExpr.properties[objExpr.properties.indexOf(prop)] = t.objectProperty(
+        t.identifier(property),
+        makeStyleValue(property, value),
+      );
+    }
+    return;
+  }
+
   objExpr.properties.push(
-    t.objectProperty(t.identifier(property), t.stringLiteral(value)),
+    t.objectProperty(t.identifier(property), makeStyleValue(property, value)),
   );
 }
 
@@ -161,7 +164,7 @@ function applyTailwindClassChange(
   openingEl: t.JSXOpeningElement,
   property: string,
   value: string,
-): void {
+): boolean {
   let classAttr: t.JSXAttribute | undefined;
   for (const attr of openingEl.attributes) {
     if (t.isJSXAttribute(attr) && t.isJSXIdentifier(attr.name, { name: 'className' })) {
@@ -171,49 +174,84 @@ function applyTailwindClassChange(
   }
 
   if (!classAttr) {
-    // No className — create one
     const newClass = transformTailwindClass('', property, value);
-    const newAttr = t.jsxAttribute(
-      t.jsxIdentifier('className'),
-      t.stringLiteral(newClass),
+    if (!newClass) return false;
+    openingEl.attributes.push(
+      t.jsxAttribute(t.jsxIdentifier('className'), t.stringLiteral(newClass)),
     );
-    openingEl.attributes.push(newAttr);
-    return;
+    return true;
   }
 
   if (t.isStringLiteral(classAttr.value)) {
-    const current = classAttr.value.value;
-    classAttr.value = t.stringLiteral(transformTailwindClass(current, property, value));
-    return;
+    const updated = transformTailwindClass(classAttr.value.value, property, value);
+    if (!updated) return false;
+    classAttr.value = t.stringLiteral(updated);
+    return true;
   }
 
-  if (
-    t.isJSXExpressionContainer(classAttr.value) &&
-    t.isStringLiteral(classAttr.value.expression)
-  ) {
-    const current = classAttr.value.expression.value;
-    classAttr.value.expression = t.stringLiteral(
-      transformTailwindClass(current, property, value),
-    );
-    return;
+  if (t.isJSXExpressionContainer(classAttr.value)) {
+    const expr = classAttr.value.expression;
+
+    if (t.isStringLiteral(expr)) {
+      const updated = transformTailwindClass(expr.value, property, value);
+      if (!updated) return false;
+      classAttr.value.expression = t.stringLiteral(updated);
+      return true;
+    }
+
+    if (t.isTemplateLiteral(expr) && expr.quasis.length === 1) {
+      const current = expr.quasis[0]!.value.cooked ?? '';
+      const updated = transformTailwindClass(current, property, value);
+      if (!updated) return false;
+      expr.quasis[0]!.value.cooked = updated;
+      expr.quasis[0]!.value.raw = updated;
+      return true;
+    }
   }
 
-  if (
-    t.isJSXExpressionContainer(classAttr.value) &&
-    t.isTemplateLiteral(classAttr.value.expression) &&
-    classAttr.value.expression.quasis.length === 1
-  ) {
-    const current = classAttr.value.expression.quasis[0]!.value.cooked ?? '';
-    const updated = transformTailwindClass(current, property, value);
-    classAttr.value.expression.quasis[0]!.value.cooked = updated;
-    classAttr.value.expression.quasis[0]!.value.raw = updated;
-    return;
+  return false;
+}
+
+// ─── Element matching ────────────────────────────────────────────────────────
+
+interface Candidate {
+  node: t.JSXOpeningElement;
+  loc: SourceLocation | null;
+}
+
+function matchesSource(loc: SourceLocation | null, target: SourceLocation): boolean {
+  if (!loc) return false;
+  if (loc.line !== target.line) return false;
+  if (target.column == null || loc.column == null) return true;
+  return Math.abs(loc.column - target.column) <= 1;
+}
+
+function candidatesForSelector(
+  candidates: Candidate[],
+  selector: TransformRequest['selector'],
+): Candidate[] {
+  const byTag = candidates.filter(
+    (c) => getTagName(c.node).toLowerCase() === selector.tagName.toLowerCase(),
+  );
+
+  // 1. Exact source position (most reliable across multi-file projects).
+  if (selector.source) {
+    const bySource = byTag.filter((c) => matchesSource(c.loc, selector.source!));
+    if (bySource.length === 1) return bySource;
+    if (bySource.length > 1) return bySource;
   }
 
-  // For complex expressions (e.g. clsx calls) — append a string concat or just add as-is
-  // Fallback: add a new className attribute won't work (duplicate), so skip
-  // In practice, a simpler approach is to convert to inline style as fallback
-  applyInlineStyleChange(openingEl, property, value);
+  // 2. Fall back to className subset matching.
+  if (selector.className) {
+    const selectorTokens = selector.className.split(/\s+/).filter(Boolean);
+    const byClass = byTag.filter((c) => {
+      const elementTokens = getClassName(c.node).split(/\s+/).filter(Boolean);
+      return selectorTokens.every((tok) => elementTokens.includes(tok));
+    });
+    if (byClass.length > 0) return byClass;
+  }
+
+  return byTag;
 }
 
 // ─── Main export ─────────────────────────────────────────────────────────────
@@ -222,56 +260,57 @@ export async function applyTransform(
   request: TransformRequest,
   projectInfo: ProjectInfo,
 ): Promise<string> {
-  const { file, selector, changes } = request;
+  const { selector, changes } = request;
+  const file = resolveWithin(projectInfo.root, request.file);
+
   const { ast, content } = await parseFile(file);
 
-  const matchingElements: t.JSXOpeningElement[] = [];
+  const candidates: Candidate[] = [];
 
-  // Collect all matching JSX elements
   traverse(ast, {
     JSXOpeningElement(path: any) {
-      if (elementMatchesSelector(path.node, selector)) {
-        matchingElements.push(path.node);
-      }
+      const node = path.node as t.JSXOpeningElement;
+      candidates.push({
+        node,
+        loc: node.loc
+          ? { line: node.loc.start.line, column: node.loc.start.column }
+          : null,
+      });
     },
   });
 
+  const matches = candidatesForSelector(candidates, selector);
   const targetIndex = selector.index ?? 0;
-  const targetEl = matchingElements[targetIndex];
+  const targetEl = matches[targetIndex]?.node;
 
   if (!targetEl) {
-    const found = matchingElements.length;
     throw new Error(
-      `Could not find JSX element matching selector (tagName: "${selector.tagName}", className: "${selector.className ?? ''}", index: ${targetIndex}). Found ${found} match(es).`,
+      `Could not find JSX element matching selector (tagName: "${selector.tagName}", ` +
+        `className: "${selector.className ?? ''}", index: ${targetIndex}` +
+        `${selector.source ? `, line: ${selector.source.line}` : ''}). ` +
+        `Found ${matches.length} match(es).`,
     );
   }
 
-  // Determine styling approach
   const useTailwind = projectInfo.hasTailwind;
+  const hasInlineStyle = findStyleAttr(targetEl) !== undefined;
 
-  // Check if the element already has inline styles — if so, prefer inline for that element
-  const hasInlineStyle = targetEl.attributes.some(
-    (attr) => t.isJSXAttribute(attr) && t.isJSXIdentifier(attr.name, { name: 'style' }),
-  );
-
-  // Apply each change
   for (const change of changes) {
     const val = formatStyleValue(change.property, change.value, change.unit);
-    if (useTailwind && !hasInlineStyle) {
-      applyTailwindClassChange(targetEl, change.property, val);
-    } else {
-      applyInlineStyleChange(targetEl, change.property, val);
+
+    if (useTailwind && !hasInlineStyle && canMapToTailwind(change.property)) {
+      const applied = applyTailwindClassChange(targetEl, change.property, val);
+      if (applied) continue;
     }
+
+    // Anything Tailwind cannot express (backdrop-filter, box-shadow, compound
+    // colours, …) falls back to an inline style instead of being dropped.
+    applyInlineStyleChange(targetEl, change.property, val);
   }
 
-  // Generate new code
   const output = generate(ast, { retainLines: false, compact: false }, content);
-  const newContent = output.code;
+  const formatted = await formatCode(output.code, file);
 
-  // Format with prettier
-  const formatted = await formatCode(newContent, file);
-
-  // Write to file
   await fs.writeFile(file, formatted, 'utf-8');
 
   return formatted;

@@ -1,52 +1,10 @@
 import { useStore } from '../../../store'
-import { api } from '../../../lib/api'
-import type { ElementInfo, TransformRequest } from '../../../types'
+import { useTransform } from '../../../lib/useTransform'
 import { Section } from '../../ui/Section'
 import { ColorPicker } from '../../ui/ColorPicker'
 import { Input } from '../../ui/Input'
 import { Select } from '../../ui/Select'
 import { AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react'
-
-function buildSelector(el: ElementInfo) {
-  return {
-    tagName: el.tagName,
-    className: el.className ? el.className.split(' ')[0] : undefined,
-    componentName: el.componentName ?? undefined,
-    index: el.index,
-  }
-}
-
-function useTransform() {
-  const project = useStore((s) => s.project)
-  const componentTree = useStore((s) => s.componentTree)
-  const selectedElement = useStore((s) => s.selectedElement)
-  const updateSelectedElementStyle = useStore((s) => s.updateSelectedElementStyle)
-
-  return async (property: string, value: string, unit?: string) => {
-    if (!selectedElement || !project) return
-
-    let finalValue = value
-    if (unit && !finalValue.endsWith(unit) && /^-?\d+(\.\d+)?$/.test(finalValue.trim())) {
-      finalValue = `${finalValue.trim()}${unit}`
-    }
-
-    // Optimistically update store state so UI inputs reflect change immediately
-    updateSelectedElementStyle(property, finalValue)
-
-    let file = project.entryFile
-    if (selectedElement.componentName) {
-      const node = componentTree.find((n) => n.name === selectedElement.componentName)
-      if (node) file = node.file
-    }
-    const req: TransformRequest = {
-      file,
-      selector: buildSelector(selectedElement),
-      changes: [{ property, value: finalValue, unit }],
-    }
-    const result = await api.transform(req)
-    if (!result.success) console.warn('[transform] failed:', result.error)
-  }
-}
 
 function parsePx(val: string): string {
   if (!val) return ''

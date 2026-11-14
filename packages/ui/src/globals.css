@@ -21,6 +21,10 @@
   --canvas-bg:      #090b10;
   --canvas-dot:     rgba(255, 255, 255, 0.15);
   --topbar-bg:      rgba(11, 13, 18, 0.9);
+  --code-bg:        #0b0d13;
+  --terminal-bg:    #07080c;
+  --modal-bg:       #0c0e14;
+  --statusbar-bg:   #090b10;
 }
 
 html.light {
@@ -37,6 +41,10 @@ html.light {
   --canvas-bg:      #e5e7eb;
   --canvas-dot:     rgba(0, 0, 0, 0.12);
   --topbar-bg:      rgba(255, 255, 255, 0.92);
+  --code-bg:        #ffffff;
+  --terminal-bg:    #f8fafc;
+  --modal-bg:       #ffffff;
+  --statusbar-bg:   #f1f5f9;
 }
 
 body {
@@ -136,3 +144,31 @@ input[type='color']::-webkit-color-swatch {
   border: none;
   border-radius: 4px;
 }
+
+/* ── Light-mode overrides for surfaces built with white-based utilities ────
+   These containers originally hardcoded dark backgrounds and white text.
+   Scoping the overrides to `.verya-themed` keeps accent buttons (white text on
+   a coloured background) unaffected. */
+html.light .verya-themed {
+  color-scheme: light;
+}
+
+html.light .verya-themed .text-white { color: #111827; }
+html.light .verya-themed .text-white\/80 { color: rgba(17, 24, 39, 0.85); }
+html.light .verya-themed .text-white\/70 { color: rgba(17, 24, 39, 0.72); }
+html.light .verya-themed .text-white\/60 { color: rgba(17, 24, 39, 0.62); }
+html.light .verya-themed .text-white\/50 { color: rgba(17, 24, 39, 0.55); }
+html.light .verya-themed .text-white\/40 { color: rgba(17, 24, 39, 0.55); }
+html.light .verya-themed .text-white\/30 { color: rgba(17, 24, 39, 0.45); }
+html.light .verya-themed .text-white\/20 { color: rgba(17, 24, 39, 0.18); }
+
+html.light .verya-themed .border-white\/15,
+html.light .verya-themed .border-white\/10 { border-color: rgba(0, 0, 0, 0.12); }
+html.light .verya-themed .border-white\/5 { border-color: rgba(0, 0, 0, 0.08); }
+
+html.light .verya-themed .bg-white\/15 { background-color: rgba(0, 0, 0, 0.1); }
+html.light .verya-themed .bg-white\/10 { background-color: rgba(0, 0, 0, 0.07); }
+html.light .verya-themed .bg-white\/5 { background-color: rgba(0, 0, 0, 0.05); }
+html.light .verya-themed .bg-white\/\[0\.02\] { background-color: rgba(0, 0, 0, 0.02); }
+html.light .verya-themed .bg-white\/\[0\.01\] { background-color: rgba(0, 0, 0, 0.01); }
+html.light .verya-themed .bg-white\/\[0\.03\] { background-color: rgba(0, 0, 0, 0.03); }

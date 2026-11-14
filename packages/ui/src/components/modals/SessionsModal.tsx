@@ -41,7 +41,7 @@ export const SessionsModal = () => {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-6 select-none">
-      <div className="w-full max-w-2xl bg-[#0c0e14] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-xs">
+      <div className="w-full max-w-2xl verya-themed bg-[var(--modal-bg)] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-xs">
         {/* Header */}
         <div className="h-14 px-6 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
           <div className="flex items-center gap-3">

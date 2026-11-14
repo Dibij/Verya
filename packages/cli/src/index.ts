@@ -1,13 +1,32 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import chalk from 'chalk';
+import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { detectProject } from './detect.js';
 import { spawnVeryaServer } from './spawn.js';
 import { sessionManager } from '@verya/server';
 import { checkForUpdates } from './updater.js';
 
-const VERSION = '0.2.5';
+function readVersion(): string {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.join(__dirname, '..', 'package.json'),
+    path.join(__dirname, '..', '..', '..', '..', 'package.json'),
+  ];
+  for (const candidate of candidates) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(candidate, 'utf-8')) as { name?: string; version?: string };
+      if (pkg.version && (pkg.name === '@verya/cli' || pkg.name === 'verya')) return pkg.version;
+    } catch {
+      // try next candidate
+    }
+  }
+  return '0.0.0';
+}
+
+const VERSION = readVersion();
 
 const BANNER = chalk.bold.hex('#6366f1')(`
  __   _____ ____  _   _   _   
@@ -26,13 +45,18 @@ program
   .option('-p, --port <port>', 'Port for the Verya server', '3111')
   .option('-s, --session <id>', 'Resume a specific editing session')
   .option('--list-sessions', 'List existing sessions for this project')
+  .option('--update', 'Download and install the latest Verya release')
   .option('--verbose', 'Show detailed debug and compiler output')
   .option('--no-open', 'Do not open browser automatically')
   .option('--no-update', 'Skip checking for newer Verya versions on startup')
-  .action(async (projectPath: string, options: { port: string; session?: string; listSessions?: boolean; verbose?: boolean; open: boolean; update: boolean }) => {
-    // 0. Auto-check for updates if running normal command
+  .action(async (projectPath: string, options: { port: string; session?: string; listSessions?: boolean; update?: boolean; verbose?: boolean; open: boolean }) => {
+    // 0. Update check. Auto-apply only when explicitly requested via --update.
     if (options.update !== false && !options.listSessions) {
-      await checkForUpdates(VERSION);
+      await checkForUpdates(VERSION, { autoApply: options.update === true });
+    }
+    if (options.update === true) {
+      // Nothing else to do for an explicit update request.
+      return;
     }
 
     // 1. Session listing mode

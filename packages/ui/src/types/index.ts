@@ -21,6 +21,7 @@ export interface SessionMetadata {
   updatedAt: string;
   saved: boolean;
   modifiedFiles: string[];
+  originalSnapshots?: Record<string, { mtime: number; size: number; hash?: string }>;
 }
 
 export interface SessionFileDiff {
@@ -61,12 +62,19 @@ export interface ComponentNode {
   children?: ComponentNode[];
 }
 
+export interface ElementSource {
+  fileName: string;
+  line: number;
+  column?: number;
+}
+
 export interface ElementInfo {
   tagName: string;
   id: string;
   className: string;
   componentName: string | null;
   index?: number;
+  source?: ElementSource | null;
   rect: { top: number; left: number; width: number; height: number };
   computedStyle: {
     display: string;
@@ -117,6 +125,7 @@ export interface TransformRequest {
     tagName: string;
     className?: string;
     index?: number;
+    source?: { line: number; column?: number };
   };
   changes: StyleChange[];
 }

@@ -12,7 +12,7 @@ export const BottomBar = () => {
   const count = session?.modifiedFiles.length || changedFiles.length
 
   return (
-    <footer className="h-7 border-t border-white/[0.06] bg-[#090b10] px-3 flex items-center justify-between text-[11px] text-white/50 select-none z-20">
+    <footer className="h-7 border-t border-white/[0.06] verya-themed bg-[var(--statusbar-bg)] px-3 flex items-center justify-between text-[11px] text-white/50 select-none z-20">
       {/* Left: Session Safety Status */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1.5 text-emerald-400">

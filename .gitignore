@@ -16,6 +16,8 @@ out/
 .nuxt/
 .output/
 dist-release/
+.release-stage/
+.npm-cache/
 
 # ─── Verya Runtime ────────────────────────────────────────────────────────────
 .verya/

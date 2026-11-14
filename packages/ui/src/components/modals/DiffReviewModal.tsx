@@ -25,6 +25,7 @@ export const DiffReviewModal = () => {
   const [selectedFileIndex, setSelectedFileIndex] = useState(0)
   const [applying, setApplying] = useState(false)
   const [appliedSuccess, setAppliedSuccess] = useState<string | null>(null)
+  const [skippedWarning, setSkippedWarning] = useState<string | null>(null)
 
   useEffect(() => {
     if (isDiffModalOpen && project?.sessionId) {
@@ -38,24 +39,35 @@ export const DiffReviewModal = () => {
 
   if (!isDiffModalOpen) return null
 
-  const handleAccept = async () => {
+  const handleAccept = async (force = false) => {
     if (!project?.sessionId) return
     setApplying(true)
+    setSkippedWarning(null)
 
     try {
-      const res = await api.acceptChanges(project.sessionId)
+      const res = await api.acceptChanges(project.sessionId, undefined, force)
       if (res?.success) {
-        setAppliedSuccess(`Applied ${res.accepted.length} file(s) to original project. Backup created at: ${res.backupPath}`)
-        addTerminalLog(`✔ Successfully applied session changes to ${project.originalRoot}`)
-        clearChangedFiles()
-        // Refresh session
-        api.saveSession().then((s) => {
-          if (s.session) setSession(s.session)
-        })
-        setTimeout(() => {
-          setIsDiffModalOpen(false)
-          setAppliedSuccess(null)
-        }, 2200)
+        if (res.skipped.length > 0) {
+          setSkippedWarning(
+            `${res.skipped.length} conflicted file(s) were not applied. ` +
+              `Re-open the diff and choose "Apply anyway" to overwrite them.`
+          )
+        } else {
+          setAppliedSuccess(
+            `Applied ${res.accepted.length} file(s) to original project. Backup created at: ${res.backupPath}`
+          )
+          addTerminalLog(
+            `✔ Successfully applied session changes to ${project.originalRoot ?? 'project'}`
+          )
+          clearChangedFiles()
+          api.saveSession().then((s) => {
+            if (s.session) setSession(s.session)
+          })
+          setTimeout(() => {
+            setIsDiffModalOpen(false)
+            setAppliedSuccess(null)
+          }, 2200)
+        }
       }
     } finally {
       setApplying(false)
@@ -66,7 +78,7 @@ export const DiffReviewModal = () => {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-6 select-none">
-      <div className="w-full max-w-5xl h-[85vh] bg-[#0c0e14] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-xs">
+      <div className="w-full max-w-5xl h-[85vh] verya-themed bg-[var(--modal-bg)] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-xs">
         {/* Modal Header */}
         <div className="h-14 px-6 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
           <div className="flex items-center gap-3">
@@ -136,7 +148,7 @@ export const DiffReviewModal = () => {
             </div>
 
             {/* Diff Viewer */}
-            <div className="flex-1 flex flex-col overflow-hidden bg-[#07080c]">
+            <div className="flex-1 flex flex-col overflow-hidden bg-[var(--terminal-bg)]">
               {selectedFile && (
                 <>
                   <div className="h-10 px-4 flex items-center justify-between border-b border-white/5 bg-white/[0.01] font-mono text-[11px] text-white/60">
@@ -200,6 +212,9 @@ export const DiffReviewModal = () => {
             {appliedSuccess && (
               <span className="text-emerald-400 text-xs font-medium">{appliedSuccess}</span>
             )}
+            {skippedWarning && (
+              <span className="text-amber-400 text-xs font-medium max-w-sm">{skippedWarning}</span>
+            )}
 
             <button
               onClick={() => setIsDiffModalOpen(false)}
@@ -208,8 +223,19 @@ export const DiffReviewModal = () => {
               Cancel
             </button>
 
+            {diffData?.hasAnyConflict && (
+              <button
+                onClick={() => handleAccept(true)}
+                disabled={applying}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 disabled:opacity-40 transition"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Apply anyway</span>
+              </button>
+            )}
+
             <button
-              onClick={handleAccept}
+              onClick={() => handleAccept(false)}
               disabled={applying || !diffData || diffData.files.length === 0}
               className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/20 disabled:opacity-40 transition"
             >

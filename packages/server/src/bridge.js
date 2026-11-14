@@ -168,11 +168,43 @@
     return null;
   }
 
+  // React records the JSX call site on the fiber as _debugSource in development.
+  // It is the only reliable way to map a DOM node back to a specific source line
+  // when the same tag/class combination appears many times across many files.
+  function getReactSource(el) {
+    var fiberKey = Object.keys(el).find(function (k) {
+      return k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$');
+    });
+    if (!fiberKey) return null;
+
+    var current = el[fiberKey];
+    while (current) {
+      var source = current._debugSource;
+      if (source && typeof source.fileName === 'string' && source.lineNumber) {
+        return {
+          fileName: source.fileName,
+          line: source.lineNumber,
+          column: source.columnNumber || undefined,
+        };
+      }
+      current = current.return;
+    }
+    return null;
+  }
+
+  function classNameOf(el) {
+    // SVG elements expose className as an SVGAnimatedString, which is not
+    // structured-cloneable and would throw inside postMessage.
+    if (typeof el.className === 'string') return el.className;
+    return el.getAttribute('class') || '';
+  }
+
   // ─── Collect ElementInfo ──────────────────────────────────────────────────
   function collectElementInfo(el) {
     var rect = el.getBoundingClientRect();
     var cs = window.getComputedStyle(el);
     var componentName = getReactComponentName(el);
+    var source = getReactSource(el);
 
     // Compute index among siblings of same tag inside root
     var container = document.getElementById('root') || document.body || document.documentElement;
@@ -190,9 +222,12 @@
     return {
       tagName: el.tagName.toLowerCase(),
       id: el.id || '',
-      className: el.className || '',
+      className: classNameOf(el),
       componentName: componentName,
       index: tagIndex,
+      source: source
+        ? { fileName: source.fileName, line: source.line, column: source.column }
+        : null,
       rect: {
         top: rect.top,
         left: rect.left,
@@ -295,6 +330,7 @@
 
   // ─── Messages from parent ─────────────────────────────────────────────────
   window.addEventListener('message', function (e) {
+    if (e.source !== window.parent) return;
     if (!e.data || typeof e.data !== 'object') return;
     if (e.data.type === 'VERYA_DESELECT') {
       selBox.style.display = 'none';

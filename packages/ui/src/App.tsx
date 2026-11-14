@@ -79,14 +79,20 @@ function App() {
     }
   }, [setBuildStatus, addChangedFile, setSession, addTerminalLog])
 
-  // Listen for postMessage from iframe (VERYA_SELECT)
+  // Listen for postMessage from the preview iframe (VERYA_SELECT)
   useEffect(() => {
     const handler = async (event: MessageEvent) => {
+      // Only accept messages from a local preview origin.
+      const isOwnOrigin = event.origin === window.location.origin
+      const isLoopbackPreview = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]):\d+$/.test(
+        event.origin
+      )
+      if (!isOwnOrigin && !isLoopbackPreview) return
+
       if (event.data && event.data.type === 'VERYA_SELECT') {
         const payload = event.data.payload as ElementInfo
         setSelectedElement(payload)
 
-        // Try to fetch component tree for the relevant file
         if (project?.entryFile) {
           const tree = await api.getComponentTree(project.entryFile)
           setComponentTree(tree)

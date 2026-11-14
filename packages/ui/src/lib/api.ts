@@ -39,6 +39,15 @@ export const api = {
     )
   },
 
+  async saveFile(path: string, content: string): Promise<boolean> {
+    const result = await safeFetch<{ success: boolean }>(`${BASE}/api/files/file`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, content }),
+    })
+    return result?.success === true
+  },
+
   async transform(
     req: TransformRequest
   ): Promise<{ success: boolean; newContent?: string; error?: string }> {
@@ -84,16 +93,24 @@ export const api = {
 
   async acceptChanges(
     sessionId: string,
-    files?: string[]
-  ): Promise<{ success: boolean; accepted: string[]; backupPath: string } | null> {
-    return safeFetch<{ success: boolean; accepted: string[]; backupPath: string }>(
-      `${BASE}/api/sessions/${sessionId}/accept`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files }),
-      }
-    )
+    files?: string[],
+    force = false
+  ): Promise<{
+    success: boolean
+    accepted: string[]
+    skipped: string[]
+    backupPath: string
+  } | null> {
+    return safeFetch<{
+      success: boolean
+      accepted: string[]
+      skipped: string[]
+      backupPath: string
+    }>(`${BASE}/api/sessions/${sessionId}/accept`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files, force }),
+    })
   },
 
   async deleteSession(sessionId: string): Promise<boolean> {

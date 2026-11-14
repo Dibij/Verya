@@ -1,9 +1,11 @@
 {
   "name": "@verya/cli",
-  "version": "0.1.0",
+  "version": "0.2.5",
   "description": "Verya CLI — launch visual editing for your React project",
   "type": "module",
-  "bin": { "verya": "./dist/index.js" },
+  "bin": {
+    "verya": "./dist/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts"

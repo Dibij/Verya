@@ -60,10 +60,26 @@ if [ -f "$REPO_ROOT/package.json" ] && [ -d "$REPO_ROOT/packages" ]; then
   fi
 else
   TAR_URL="https://github.com/$REPO/releases/latest/download/verya-${OS}-${ARCH_NAME}.tar.gz"
+  CHECKSUM_URL="https://github.com/$REPO/releases/latest/download/checksums.txt"
+  ASSET_NAME="verya-${OS}-${ARCH_NAME}.tar.gz"
   echo "Fetching release archive from GitHub ($TAR_URL)..."
-  if curl -fsSL "$TAR_URL" -o /tmp/verya.tar.gz 2>/dev/null; then
+  if curl -fsSL "$TAR_URL" -o /tmp/verya.tar.gz 2>/dev/null \
+     && curl -fsSL "$CHECKSUM_URL" -o /tmp/verya-checksums.txt 2>/dev/null; then
+    # Verify the archive against the published SHA-256 before extracting.
+    EXPECTED="$(grep "  ${ASSET_NAME}\$" /tmp/verya-checksums.txt | awk '{print $1}')"
+    if command -v sha256sum >/dev/null 2>&1; then
+      ACTUAL="$(sha256sum /tmp/verya.tar.gz | awk '{print $1}')"
+    else
+      ACTUAL="$(shasum -a 256 /tmp/verya.tar.gz | awk '{print $1}')"
+    fi
+    if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+      echo "✖ Checksum verification failed for $ASSET_NAME — aborting download."
+      rm -f /tmp/verya.tar.gz /tmp/verya-checksums.txt
+      exit 1
+    fi
+    echo "✓ Checksum verified"
     tar -xzf /tmp/verya.tar.gz -C "$INSTALL_DIR"
-    rm -f /tmp/verya.tar.gz
+    rm -f /tmp/verya.tar.gz /tmp/verya-checksums.txt
   else
     echo "Falling back to git clone..."
     git clone https://github.com/$REPO.git "$INSTALL_DIR" --depth 1

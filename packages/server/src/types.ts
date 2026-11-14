@@ -21,7 +21,7 @@ export interface SessionMetadata {
   updatedAt: string;
   saved: boolean;
   modifiedFiles: string[];
-  originalSnapshots: Record<string, { mtime: number; size: number }>;
+  originalSnapshots: Record<string, { mtime: number; size: number; hash: string }>;
 }
 
 export interface SessionFileDiff {
@@ -86,6 +86,11 @@ export interface ElementInfo {
   };
 }
 
+export interface SourceLocation {
+  line: number;
+  column?: number;
+}
+
 export interface TransformRequest {
   file: string;           // path to file to transform
   selector: {
@@ -93,6 +98,7 @@ export interface TransformRequest {
     tagName: string;
     className?: string;   // current className to match element
     index?: number;       // if multiple matches, which one (0-based)
+    source?: SourceLocation; // exact source position captured from the preview
   };
   changes: StyleChange[];
 }

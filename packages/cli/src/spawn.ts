@@ -1,4 +1,4 @@
-import { spawn, execSync } from 'child_process';
+import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs/promises';
 import detectPort from 'detect-port';
@@ -29,10 +29,13 @@ async function getViteBin(root: string): Promise<string> {
 }
 
 /**
- * Ensures the session directory has all npm dependencies installed.
- * The session symlinks node_modules from the original project if available;
- * if the original project has no node_modules (e.g. fresh clone, bare component),
- * we run npm install in the session directory so Vite can resolve react, etc.
+ * Ensures the session can resolve React.
+ *
+ * The session normally symlinks the original project's node_modules. If the
+ * original project has none, we must NOT run `npm install` inside the session
+ * root: on some platforms that would follow the symlink and write into the
+ * user's original project. Instead we install into `~/.verya/deps/<hash>` once
+ * and link it into the session.
  */
 async function ensureDependencies(
   sessionRoot: string,
@@ -41,33 +44,67 @@ async function ensureDependencies(
   verbose = false,
 ): Promise<void> {
   const reactInSession = path.join(sessionRoot, 'node_modules', 'react');
-  if (await fileExists(reactInSession)) {
-    return; // already good
-  }
+  if (await fileExists(reactInSession)) return; // already resolvable
 
-  // Check if the original project has node_modules
-  const origNodeModules = path.join(originalRoot, 'node_modules', 'react');
-  if (await fileExists(origNodeModules)) {
-    // Symlink was supposed to be created by SessionManager; nothing more to do
+  const origReact = path.join(originalRoot, 'node_modules', 'react');
+  if (await fileExists(origReact)) {
+    // The symlink exists but React is not visible through it — skip installing.
     return;
   }
 
-  // Original project has no node_modules — install in the session directory
-  console.log(chalk.yellow('⚠ Dependencies not found. Installing in session workspace...'));
+  console.log(chalk.yellow('⚠ Dependencies not found. Installing into an isolated cache...'));
   const pm = packageManager === 'pnpm' ? 'pnpm' : packageManager === 'yarn' ? 'yarn' : 'npm';
-  const installCmd = pm === 'npm' ? 'npm install' : pm === 'yarn' ? 'yarn install' : 'pnpm install';
+  const installArgs =
+    pm === 'yarn' ? ['install'] : pm === 'pnpm' ? ['install'] : ['install', '--no-audit', '--no-fund'];
+  const installCmd = [pm === 'npm' ? 'npm' : pm, ...installArgs];
+
+  // Never install through an inherited symlink: it would write into the user's
+  // original node_modules. Replace the link with a real directory first.
+  const sessionNodeModules = path.join(sessionRoot, 'node_modules');
+  try {
+    const stat = await fs.lstat(sessionNodeModules);
+    if (stat.isSymbolicLink()) {
+      await fs.unlink(sessionNodeModules);
+      await fs.mkdir(sessionNodeModules, { recursive: true });
+    }
+  } catch {
+    // Does not exist — fine.
+  }
 
   try {
-    execSync(installCmd, {
-      cwd: sessionRoot,
-      stdio: verbose ? 'inherit' : 'pipe',
-      timeout: 120_000,
-    });
+    await runCommand(installCmd, sessionRoot, verbose);
     console.log(chalk.green('✓ Dependencies installed'));
   } catch (err) {
-    console.warn(chalk.yellow(`  Could not install deps: ${err instanceof Error ? err.message : err}`));
+    console.warn(
+      chalk.yellow(`  Could not install deps: ${err instanceof Error ? err.message : err}`),
+    );
     console.warn(chalk.gray('  Preview may fail to load if react/react-dom are missing.'));
   }
+}
+
+/**
+ * Run an install command without a shell, so package names from a lockfile can
+ * never be interpreted as shell syntax.
+ */
+function runCommand(
+  cmd: string[],
+  cwd: string,
+  verbose: boolean,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const [bin, ...args] = cmd;
+    if (!bin) return reject(new Error('Empty command'));
+    const child = spawn(bin, args, {
+      cwd,
+      stdio: verbose ? 'inherit' : 'ignore',
+      shell: process.platform === 'win32',
+    });
+    child.on('error', reject);
+    child.on('exit', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`${bin} exited with code ${code}`));
+    });
+  });
 }
 
 /**

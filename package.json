@@ -1,8 +1,11 @@
 {
   "name": "verya",
-  "version": "0.1.0",
+  "version": "0.2.5",
   "private": true,
   "description": "Verya — Visual editing for real code.",
+  "engines": {
+    "node": ">=18.18"
+  },
   "bin": {
     "verya": "./packages/cli/dist/index.js"
   },
@@ -11,10 +14,15 @@
   ],
   "scripts": {
     "dev": "concurrently -n \"server,ui\" -c \"cyan,magenta\" \"npm run dev -w @verya/server\" \"npm run dev -w @verya/ui\"",
+    "dev:server": "npm run dev -w @verya/server",
+    "dev:ui": "npm run dev -w @verya/ui",
     "build:ui": "npm run build -w @verya/ui",
     "build:server": "npm run build -w @verya/server",
     "build:cli": "npm run build -w @verya/cli",
     "build": "npm run build:ui && npm run build:server && npm run build:cli",
+    "typecheck": "tsc -p packages/server/tsconfig.json --noEmit && tsc -p packages/cli/tsconfig.json --noEmit && tsc -p packages/ui/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "package": "node scripts/package-release.js",
     "release": "node scripts/auto-release.js patch",
     "release:patch": "node scripts/auto-release.js patch",
@@ -22,13 +30,18 @@
     "release:major": "node scripts/auto-release.js major",
     "start": "node packages/cli/dist/index.js",
     "verya": "node packages/cli/dist/index.js",
-    "lint": "eslint packages/*/src --ext .ts,.tsx"
+    "lint": "eslint .",
+    "format": "prettier --write \"packages/*/src/**/*.{ts,tsx,css}\""
   },
   "devDependencies": {
+    "@eslint/js": "^9.9.0",
     "concurrently": "^8.2.2",
     "eslint": "^9.9.0",
+    "globals": "^15.9.0",
     "prettier": "^3.3.3",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.5.0",
+    "vitest": "^2.1.1"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "^4.63.3"

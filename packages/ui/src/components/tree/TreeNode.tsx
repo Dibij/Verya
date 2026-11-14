@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import type { ComponentNode } from '../../types'
-import { useStore } from '../../store'
-import clsx from 'clsx'
 
 interface TreeNodeProps {
   node: ComponentNode

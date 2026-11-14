@@ -1,6 +1,5 @@
 import fs from 'fs/promises';
 import path from 'path';
-import type { ProjectInfo } from '@verya/server';
 
 export interface DetectedProject {
   name: string;

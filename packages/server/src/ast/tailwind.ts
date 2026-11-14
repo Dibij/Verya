@@ -1,9 +1,14 @@
-// Tailwind class mapping utilities
+// Tailwind class mapping utilities.
+//
+// All class manipulation is token-based: the className string is split on
+// whitespace, and whole tokens are matched with anchored regexes. Regex
+// replacement over the raw string (the previous approach) would corrupt
+// compound utilities such as `flex-col` or `bg-gradient-to-r`.
 
 // Tailwind spacing scale px values
 const TAILWIND_SPACING: Record<string, number> = {
   '0': 0,
-  'px': 1,
+  px: 1,
   '0.5': 2,
   '1': 4,
   '1.5': 6,
@@ -41,7 +46,7 @@ const TAILWIND_SPACING: Record<string, number> = {
 
 // Build reverse map: px → tailwind scale key
 const PX_TO_SCALE: Map<number, string> = new Map(
-  Object.entries(TAILWIND_SPACING).map(([k, v]) => [v, k])
+  Object.entries(TAILWIND_SPACING).map(([k, v]) => [v, k]),
 );
 
 /**
@@ -49,9 +54,7 @@ const PX_TO_SCALE: Map<number, string> = new Map(
  * Returns e.g. '6' for 24px, or '[24px]' for arbitrary values.
  */
 export function pxToTailwindSpacing(px: number): string {
-  if (PX_TO_SCALE.has(px)) {
-    return PX_TO_SCALE.get(px)!;
-  }
+  if (PX_TO_SCALE.has(px)) return PX_TO_SCALE.get(px)!;
   return `[${px}px]`;
 }
 
@@ -70,9 +73,7 @@ const BORDER_RADIUS_MAP: Array<[number, string]> = [
 
 function pxToBorderRadius(px: number): string {
   for (const [val, suffix] of BORDER_RADIUS_MAP) {
-    if (px === val) {
-      return suffix === '' ? 'rounded' : `rounded-${suffix}`;
-    }
+    if (px === val) return suffix === '' ? 'rounded' : `rounded-${suffix}`;
   }
   return `rounded-[${px}px]`;
 }
@@ -117,49 +118,88 @@ const DISPLAY_MAP: Record<string, string> = {
   'inline-flex': 'inline-flex',
   'inline-grid': 'inline-grid',
   none: 'hidden',
-  'table': 'table',
+  table: 'table',
   'table-row': 'table-row',
   'table-cell': 'table-cell',
 };
 
-// Regex patterns to find and remove existing tailwind classes for each property
-const PROPERTY_PATTERNS: Record<string, RegExp> = {
-  padding: /\bp-(\d+(\.\d+)?|\[.*?\])\b/g,
-  paddingTop: /\bpt-(\d+(\.\d+)?|\[.*?\])\b/g,
-  paddingBottom: /\bpb-(\d+(\.\d+)?|\[.*?\])\b/g,
-  paddingLeft: /\bpl-(\d+(\.\d+)?|\[.*?\])\b/g,
-  paddingRight: /\bpr-(\d+(\.\d+)?|\[.*?\])\b/g,
-  paddingX: /\bpx-(\d+(\.\d+)?|\[.*?\])\b/g,
-  paddingY: /\bpy-(\d+(\.\d+)?|\[.*?\])\b/g,
-  margin: /\bm-(\d+(\.\d+)?|\[.*?\])\b/g,
-  marginTop: /\bmt-(\d+(\.\d+)?|\[.*?\])\b/g,
-  marginBottom: /\bmb-(\d+(\.\d+)?|\[.*?\])\b/g,
-  marginLeft: /\bml-(\d+(\.\d+)?|\[.*?\])\b/g,
-  marginRight: /\bmr-(\d+(\.\d+)?|\[.*?\])\b/g,
-  marginX: /\bmx-(\d+(\.\d+)?|\[.*?\])\b/g,
-  marginY: /\bmy-(\d+(\.\d+)?|\[.*?\])\b/g,
-  backgroundColor: /\bbg-[a-zA-Z0-9_/\-.\[\]#%]+/g,
-  color: /\btext-(?:(?:inherit|current|transparent|black|white|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d+|(?:inherit|current|transparent|black|white)|\[.*?\])/g,
-  fontSize: /\btext-(?:xs|sm|base|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl|\[.*?\])\b/g,
-  fontWeight: /\bfont-(?:thin|extralight|light|normal|medium|semibold|bold|extrabold|black|\[.*?\])\b/g,
-  lineHeight: /\bleading-(?:none|tight|snug|normal|relaxed|loose|\d+|\[.*?\])\b/g,
-  letterSpacing: /\btracking-(?:tighter|tight|normal|wide|wider|widest|\[.*?\])\b/g,
-  textAlign: /\btext-(?:left|center|right|justify|start|end)\b/g,
-  borderRadius: /\brounded(?:-(?:none|sm|md|lg|xl|2xl|3xl|full|\[.*?\]))?\b/g,
-  width: /\bw-(?:\d+(\.\d+)?|auto|full|screen|min|max|fit|\[.*?\])\b/g,
-  height: /\bh-(?:\d+(\.\d+)?|auto|full|screen|min|max|fit|\[.*?\])\b/g,
-  opacity: /\bopacity-(?:\d+|\[.*?\])\b/g,
-  display: /\b(?:block|inline-block|inline|flex|inline-flex|grid|inline-grid|table|hidden)\b/g,
-  gap: /\bgap-(?:\d+(\.\d+)?|\[.*?\])\b/g,
-  flexDirection: /\bflex-(?:row|col|row-reverse|col-reverse)\b/g,
-  alignItems: /\bitems-(?:start|end|center|baseline|stretch)\b/g,
-  justifyContent: /\bjustify-(?:start|end|center|between|around|evenly|stretch)\b/g,
-  position: /\b(?:static|fixed|absolute|relative|sticky)\b/g,
-  overflow: /\boverflow-(?:auto|hidden|clip|visible|scroll|x-auto|y-auto|x-hidden|y-hidden|\[.*?\])\b/g,
+const SPACING_TOKEN = '(?:\\d+(?:\\.\\d+)?|px|\\[.*?\\])';
+
+/**
+ * For each CSS property, a predicate that identifies *whole* class tokens which
+ * this property owns. Removing those tokens before appending the new one keeps
+ * the class list consistent without touching unrelated utilities.
+ */
+const PROPERTY_TOKEN_MATCHERS: Record<string, RegExp> = {
+  padding: new RegExp(`^p-${SPACING_TOKEN}$`),
+  paddingTop: new RegExp(`^pt-${SPACING_TOKEN}$`),
+  paddingBottom: new RegExp(`^pb-${SPACING_TOKEN}$`),
+  paddingLeft: new RegExp(`^pl-${SPACING_TOKEN}$`),
+  paddingRight: new RegExp(`^pr-${SPACING_TOKEN}$`),
+
+  margin: new RegExp(`^m-${SPACING_TOKEN}$`),
+  marginTop: new RegExp(`^mt-${SPACING_TOKEN}$`),
+  marginBottom: new RegExp(`^mb-${SPACING_TOKEN}$`),
+  marginLeft: new RegExp(`^ml-${SPACING_TOKEN}$`),
+  marginRight: new RegExp(`^mr-${SPACING_TOKEN}$`),
+
+  // Only colour-and-shade utilities, never `bg-gradient-*`, `bg-clip-*`, `bg-cover`.
+  backgroundColor:
+    /^bg-(?:transparent|current|inherit|black|white|\[.*?\]|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-\d{1,3})?(?:\/\d{1,3})?)$/,
+
+  // Same rule for text colour; requires a colour name/shade or arbitrary value.
+  color:
+    /^text-(?:transparent|current|inherit|black|white|\[.*?\]|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-\d{1,3})?(?:\/\d{1,3})?)$/,
+
+  fontSize: /^text-(?:xs|sm|base|lg|xl|[2-9]xl|\[.*?\])$/,
+  fontWeight: /^font-(?:thin|extralight|light|normal|medium|semibold|bold|extrabold|black|\[.*?\])$/,
+  lineHeight: /^leading-(?:none|tight|snug|normal|relaxed|loose|\d+|\[.*?\])$/,
+  letterSpacing: /^tracking-(?:tighter|tight|normal|wide|wider|widest|\[.*?\])$/,
+  textAlign: /^text-(?:left|center|right|justify|start|end)$/,
+
+  borderRadius:
+    /^rounded(?:-(?:none|sm|md|lg|xl|2xl|3xl|full|\[.*?\]))?$/,
+
+  width: /^w-(?:\d+(?:\.\d+)?|px|auto|full|screen|min|max|fit|\[.*?\])$/,
+  height: /^h-(?:\d+(?:\.\d+)?|px|auto|full|screen|min|max|fit|\[.*?\])$/,
+
+  opacity: /^opacity-(?:\d+|\[.*?\])$/,
+
+  display:
+    /^(?:block|inline-block|inline|flex|inline-flex|grid|inline-grid|table|table-row|table-cell|hidden)$/,
+
+  gap: new RegExp(`^gap-${SPACING_TOKEN}$`),
+
+  flexDirection: /^flex-(?:row|row-reverse|col|col-reverse)$/,
+  alignItems: /^items-(?:start|end|center|baseline|stretch)$/,
+  justifyContent:
+    /^justify-(?:start|end|center|between|around|evenly|stretch)$/,
+
+  position: /^(?:static|fixed|absolute|relative|sticky)$/,
+  overflow:
+    /^overflow-(?:auto|hidden|clip|visible|scroll|x-auto|y-auto|x-hidden|y-hidden|\[.*?\])$/,
+
+  borderWidth: /^border(?:-[trblxy])?(?:-\d+|\[\d+px\])?$/,
+  borderColor:
+    /^border-(?:transparent|current|inherit|black|white|\[.*?\]|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-\d{1,3})?(?:\/\d{1,3})?)$/,
+
+  boxShadow:
+    /^shadow(?:-(?:none|sm|md|lg|xl|2xl|inner|\[.*?\]))?$/,
+
+  backgroundImage: /^bg-(?:none|gradient-to-[trbl]|\[.*?\])$/,
+  backdropFilter: /^backdrop-(?:none|blur|blur-(?:sm|md|lg|xl|2xl|3xl)|\[.*?\])$/,
 };
 
+/**
+ * Properties that the class-based transformer can express. Anything else must be
+ * written as an inline style rather than silently dropped.
+ */
+export function canMapToTailwind(property: string): boolean {
+  return property in PROPERTY_TOKEN_MATCHERS || property in CASE_HANDLERS;
+}
+
 function parsePxValue(value: string): number | null {
-  const match = value.match(/^([\d.]+)px$/);
+  const match = value.match(/^(-?[\d.]+)px$/);
   if (match) return parseFloat(match[1]!);
   const num = parseFloat(value);
   if (!isNaN(num)) return num;
@@ -167,14 +207,7 @@ function parsePxValue(value: string): number | null {
 }
 
 function colorToTailwind(property: string, value: string): string {
-  // For named colors or hex, use arbitrary value
   const prefix = property === 'backgroundColor' ? 'bg' : 'text';
-  // Clean up color value for class name
-  const cleaned = value.replace(/\s+/g, '').replace('#', '#');
-  if (value.startsWith('#') || value.startsWith('rgb') || value.startsWith('hsl')) {
-    return `${prefix}-[${cleaned}]`;
-  }
-  // Named color mapping attempts (basic)
   const namedMap: Record<string, string> = {
     white: `${prefix}-white`,
     black: `${prefix}-black`,
@@ -183,188 +216,179 @@ function colorToTailwind(property: string, value: string): string {
     current: `${prefix}-current`,
   };
   if (namedMap[value.toLowerCase()]) return namedMap[value.toLowerCase()]!;
+
+  // Tailwind arbitrary values cannot contain bare spaces.
+  const cleaned = value.replace(/\s+/g, '').replace(/,/g, ',');
   return `${prefix}-[${cleaned}]`;
 }
 
+type Handler = (value: string, pxVal: number | null) => string | null;
+
+const CASE_HANDLERS: Record<string, Handler> = {
+  padding: (v, px) => `p-${px !== null ? pxToTailwindSpacing(px) : `[${v}]`}`,
+  paddingTop: (v, px) => `pt-${px !== null ? pxToTailwindSpacing(px) : `[${v}]`}`,
+  paddingBottom: (v, px) => `pb-${px !== null ? pxToTailwindSpacing(px) : `[${v}]`}`,
+  paddingLeft: (v, px) => `pl-${px !== null ? pxToTailwindSpacing(px) : `[${v}]`}`,
+  paddingRight: (v, px) => `pr-${px !== null ? pxToTailwindSpacing(px) : `[${v}]`}`,
+  margin: (v, px) => `m-${px !== null ? pxToTailwindSpacing(px) : `[${v}]`}`,
+  marginTop: (v, px) => `mt-${px !== null ? pxToTailwindSpacing(px) : `[${v}]`}`,
+  marginBottom: (v, px) => `mb-${px !== null ? pxToTailwindSpacing(px) : `[${v}]`}`,
+  marginLeft: (v, px) => `ml-${px !== null ? pxToTailwindSpacing(px) : `[${v}]`}`,
+  marginRight: (v, px) => `mr-${px !== null ? pxToTailwindSpacing(px) : `[${v}]`}`,
+
+  backgroundColor: (v) => colorToTailwind('backgroundColor', v),
+  color: (v) => colorToTailwind('color', v),
+
+  fontSize: (v, px) => (px !== null && FONT_SIZE_MAP[px] ? FONT_SIZE_MAP[px]! : `text-[${v}]`),
+  fontWeight: (v) =>
+    FONT_WEIGHT_MAP[v] || FONT_WEIGHT_MAP[String(parseInt(v, 10))] || `font-[${v}]`,
+  lineHeight: (v) => `leading-[${v}]`,
+  letterSpacing: (v) => `tracking-[${v}]`,
+  textAlign: (v) => {
+    const alignMap: Record<string, string> = {
+      left: 'text-left',
+      center: 'text-center',
+      right: 'text-right',
+      justify: 'text-justify',
+      start: 'text-start',
+      end: 'text-end',
+    };
+    return alignMap[v] ?? `text-${v}`;
+  },
+
+  borderRadius: (v, px) => (px !== null ? pxToBorderRadius(px) : `rounded-[${v}]`),
+
+  width: (v, px) => {
+    if (v === 'auto') return 'w-auto';
+    if (v === '100%') return 'w-full';
+    if (px !== null) return `w-${pxToTailwindSpacing(px)}`;
+    return `w-[${v}]`;
+  },
+  height: (v, px) => {
+    if (v === 'auto') return 'h-auto';
+    if (v === '100%') return 'h-full';
+    if (px !== null) return `h-${pxToTailwindSpacing(px)}`;
+    return `h-[${v}]`;
+  },
+
+  opacity: (v) => {
+    const opacityVal = parseFloat(v);
+    return !isNaN(opacityVal) ? `opacity-${Math.round(opacityVal * 100)}` : `opacity-[${v}]`;
+  },
+
+  display: (v) => DISPLAY_MAP[v] ?? v,
+
+  gap: (v, px) => `gap-${px !== null ? pxToTailwindSpacing(px) : `[${v}]`}`,
+
+  flexDirection: (v) => {
+    const dirMap: Record<string, string> = {
+      row: 'flex-row',
+      column: 'flex-col',
+      'row-reverse': 'flex-row-reverse',
+      'column-reverse': 'flex-col-reverse',
+    };
+    return dirMap[v] ?? `flex-${v}`;
+  },
+  alignItems: (v) => {
+    const aiMap: Record<string, string> = {
+      'flex-start': 'items-start',
+      'flex-end': 'items-end',
+      center: 'items-center',
+      baseline: 'items-baseline',
+      stretch: 'items-stretch',
+    };
+    return aiMap[v] ?? `items-${v}`;
+  },
+  justifyContent: (v) => {
+    const jcMap: Record<string, string> = {
+      'flex-start': 'justify-start',
+      'flex-end': 'justify-end',
+      center: 'justify-center',
+      'space-between': 'justify-between',
+      'space-around': 'justify-around',
+      'space-evenly': 'justify-evenly',
+      stretch: 'justify-stretch',
+    };
+    return jcMap[v] ?? `justify-${v}`;
+  },
+
+  position: (v) => v,
+
+  overflow: (v) => {
+    const overflowMap: Record<string, string> = {
+      auto: 'overflow-auto',
+      hidden: 'overflow-hidden',
+      visible: 'overflow-visible',
+      scroll: 'overflow-scroll',
+    };
+    return overflowMap[v] ?? `overflow-[${v}]`;
+  },
+
+  borderWidth: (v, px) => {
+    if (px === null) return `border-[${v}]`;
+    if (px === 0) return 'border-0';
+    if (px === 1) return 'border';
+    const scale: Record<number, string> = { 2: 'border-2', 4: 'border-4', 8: 'border-8' };
+    return scale[px] ?? `border-[${px}px]`;
+  },
+  borderColor: (v) => {
+    const named: Record<string, string> = {
+      transparent: 'border-transparent',
+      current: 'border-current',
+      inherit: 'border-inherit',
+      black: 'border-black',
+      white: 'border-white',
+    };
+    return named[v.toLowerCase()] ?? `border-[${v.replace(/\s+/g, '')}]`;
+  },
+  boxShadow: (v) => (v === 'none' ? 'shadow-none' : `shadow-[${v.replace(/\s+/g, '_')}]`),
+
+  backgroundImage: (v) => {
+    if (v === 'none') return 'bg-none';
+    return `bg-[image:${v.replace(/\s+/g, '_')}]`;
+  },
+  backdropFilter: (v) => {
+    const blur = v.match(/^blur\((\d+(?:\.\d+)?)px\)$/);
+    if (!blur) return null;
+    const px = parseFloat(blur[1]!);
+    const scale: Record<number, string> = {
+      4: 'sm',
+      8: 'md',
+      12: 'lg',
+      16: 'xl',
+      24: '2xl',
+      40: '3xl',
+    };
+    const suffix = scale[px];
+    // Only emit a class for values on Tailwind's blur scale; arbitrary blur
+    // values are not expressible as `backdrop-[…]` and must be inline styles.
+    return suffix ? `backdrop-blur-${suffix}` : null;
+  },
+};
+
 /**
- * Replaces or adds the appropriate tailwind class for a given CSS property/value pair.
- * Returns the modified className string.
+ * Replaces or adds the appropriate tailwind class for a given CSS property/value
+ * pair. Returns the modified className string, or `null` when the property has no
+ * Tailwind representation (callers should fall back to inline styles).
  */
 export function transformTailwindClass(
   className: string,
   property: string,
   value: string,
-): string {
-  let classes = className.trim();
+): string | null {
+  const handler = CASE_HANDLERS[property];
+  if (!handler) return null;
 
-  // Remove existing classes for this property
-  const pattern = PROPERTY_PATTERNS[property];
-  if (pattern) {
-    pattern.lastIndex = 0;
-    classes = classes.replace(pattern, '').replace(/\s+/g, ' ').trim();
-  }
+  const matcher = PROPERTY_TOKEN_MATCHERS[property];
+  const tokens = className.trim().split(/\s+/).filter(Boolean);
 
-  // Determine new class to add
-  let newClass = '';
+  const kept = matcher ? tokens.filter((token) => !matcher.test(token)) : tokens;
 
   const pxVal = parsePxValue(value);
+  const newClass = handler(value, pxVal);
+  if (!newClass) return null;
 
-  switch (property) {
-    case 'padding':
-      newClass = `p-${pxVal !== null ? pxToTailwindSpacing(pxVal) : `[${value}]`}`;
-      break;
-    case 'paddingTop':
-      newClass = `pt-${pxVal !== null ? pxToTailwindSpacing(pxVal) : `[${value}]`}`;
-      break;
-    case 'paddingBottom':
-      newClass = `pb-${pxVal !== null ? pxToTailwindSpacing(pxVal) : `[${value}]`}`;
-      break;
-    case 'paddingLeft':
-      newClass = `pl-${pxVal !== null ? pxToTailwindSpacing(pxVal) : `[${value}]`}`;
-      break;
-    case 'paddingRight':
-      newClass = `pr-${pxVal !== null ? pxToTailwindSpacing(pxVal) : `[${value}]`}`;
-      break;
-    case 'margin':
-      newClass = `m-${pxVal !== null ? pxToTailwindSpacing(pxVal) : `[${value}]`}`;
-      break;
-    case 'marginTop':
-      newClass = `mt-${pxVal !== null ? pxToTailwindSpacing(pxVal) : `[${value}]`}`;
-      break;
-    case 'marginBottom':
-      newClass = `mb-${pxVal !== null ? pxToTailwindSpacing(pxVal) : `[${value}]`}`;
-      break;
-    case 'marginLeft':
-      newClass = `ml-${pxVal !== null ? pxToTailwindSpacing(pxVal) : `[${value}]`}`;
-      break;
-    case 'marginRight':
-      newClass = `mr-${pxVal !== null ? pxToTailwindSpacing(pxVal) : `[${value}]`}`;
-      break;
-    case 'backgroundColor':
-      newClass = colorToTailwind('backgroundColor', value);
-      break;
-    case 'color':
-      newClass = colorToTailwind('color', value);
-      break;
-    case 'fontSize': {
-      const px = pxVal !== null ? pxVal : null;
-      if (px !== null && FONT_SIZE_MAP[px]) {
-        newClass = FONT_SIZE_MAP[px]!;
-      } else {
-        newClass = `text-[${value}]`;
-      }
-      break;
-    }
-    case 'fontWeight': {
-      const mapped = FONT_WEIGHT_MAP[value] || FONT_WEIGHT_MAP[String(parseInt(value))] || `font-[${value}]`;
-      newClass = mapped;
-      break;
-    }
-    case 'lineHeight':
-      newClass = `leading-[${value}]`;
-      break;
-    case 'letterSpacing':
-      newClass = `tracking-[${value}]`;
-      break;
-    case 'textAlign': {
-      const alignMap: Record<string, string> = {
-        left: 'text-left',
-        center: 'text-center',
-        right: 'text-right',
-        justify: 'text-justify',
-        start: 'text-start',
-        end: 'text-end',
-      };
-      newClass = alignMap[value] || `text-${value}`;
-      break;
-    }
-    case 'borderRadius':
-      newClass = pxVal !== null ? pxToBorderRadius(pxVal) : `rounded-[${value}]`;
-      break;
-    case 'width':
-      if (value === 'auto') newClass = 'w-auto';
-      else if (value === '100%') newClass = 'w-full';
-      else if (pxVal !== null) newClass = `w-${pxToTailwindSpacing(pxVal)}`;
-      else newClass = `w-[${value}]`;
-      break;
-    case 'height':
-      if (value === 'auto') newClass = 'h-auto';
-      else if (value === '100%') newClass = 'h-full';
-      else if (pxVal !== null) newClass = `h-${pxToTailwindSpacing(pxVal)}`;
-      else newClass = `h-[${value}]`;
-      break;
-    case 'opacity': {
-      const opacityVal = parseFloat(value);
-      if (!isNaN(opacityVal)) {
-        newClass = `opacity-${Math.round(opacityVal * 100)}`;
-      } else {
-        newClass = `opacity-[${value}]`;
-      }
-      break;
-    }
-    case 'display': {
-      newClass = DISPLAY_MAP[value] || value;
-      break;
-    }
-    case 'gap':
-      newClass = `gap-${pxVal !== null ? pxToTailwindSpacing(pxVal) : `[${value}]`}`;
-      break;
-    case 'flexDirection': {
-      const dirMap: Record<string, string> = {
-        row: 'flex-row',
-        column: 'flex-col',
-        'row-reverse': 'flex-row-reverse',
-        'column-reverse': 'flex-col-reverse',
-      };
-      newClass = dirMap[value] || `flex-${value}`;
-      break;
-    }
-    case 'alignItems': {
-      const aiMap: Record<string, string> = {
-        'flex-start': 'items-start',
-        'flex-end': 'items-end',
-        center: 'items-center',
-        baseline: 'items-baseline',
-        stretch: 'items-stretch',
-      };
-      newClass = aiMap[value] || `items-${value}`;
-      break;
-    }
-    case 'justifyContent': {
-      const jcMap: Record<string, string> = {
-        'flex-start': 'justify-start',
-        'flex-end': 'justify-end',
-        center: 'justify-center',
-        'space-between': 'justify-between',
-        'space-around': 'justify-around',
-        'space-evenly': 'justify-evenly',
-        stretch: 'justify-stretch',
-      };
-      newClass = jcMap[value] || `justify-${value}`;
-      break;
-    }
-    case 'position': {
-      newClass = value; // static, fixed, absolute, relative, sticky — all map directly
-      break;
-    }
-    case 'overflow': {
-      const overflowMap: Record<string, string> = {
-        auto: 'overflow-auto',
-        hidden: 'overflow-hidden',
-        visible: 'overflow-visible',
-        scroll: 'overflow-scroll',
-      };
-      newClass = overflowMap[value] || `overflow-[${value}]`;
-      break;
-    }
-    default:
-      // Arbitrary value fallback — can't map it, return unchanged
-      return classes;
-  }
-
-  if (newClass) {
-    classes = classes ? `${classes} ${newClass}` : newClass;
-  }
-
-  return classes;
+  // Only remove the new class's own token if it would duplicate.
+  const withoutDuplicate = kept.filter((token) => token !== newClass);
+  return [...withoutDuplicate, newClass].join(' ').trim();
 }

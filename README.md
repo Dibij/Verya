@@ -141,6 +141,7 @@ Options:
   -p, --port <port>   Port for the Verya server (default: "3111")
   -s, --session <id>  Resume a specific editing session
   --list-sessions     List existing sessions for this project
+  --update            Download and install the latest Verya release
   --verbose           Show detailed debug and compiler output
   --no-open           Do not open browser automatically
   -h, --help          Display help for command
@@ -161,6 +162,7 @@ When Verya launches, it scans the project:
 Verya creates an isolated workspace under `~/.verya/sessions/<session-id>/`.
 * Source code is mirrored into the session directory.
 * `node_modules` are connected via fast directory junctions (no disk space duplicated).
+* Secret files (`.env`, `.env.local`, …) are **never** copied into the session workspace; only `.env.example`-style templates are.
 * Vite runs **inside the session directory**.
 * **Your original project files remain 100% untouched while you design.**
 

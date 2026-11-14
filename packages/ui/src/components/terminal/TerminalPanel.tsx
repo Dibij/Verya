@@ -1,5 +1,5 @@
 import { useStore } from '../../store'
-import { Terminal, X, Trash2 } from 'lucide-react'
+import { Terminal, X } from 'lucide-react'
 
 export const TerminalPanel = () => {
   const isTerminalOpen = useStore((s) => s.isTerminalOpen)
@@ -9,7 +9,7 @@ export const TerminalPanel = () => {
   if (!isTerminalOpen) return null
 
   return (
-    <div className="h-44 border-t border-white/[0.08] bg-[#07080c] flex flex-col font-mono text-xs z-30 select-none">
+    <div className="h-44 border-t border-white/[0.08] verya-themed bg-[var(--terminal-bg)] flex flex-col font-mono text-xs z-30 select-none">
       {/* Terminal Header */}
       <div className="h-7 px-3 flex items-center justify-between border-b border-white/5 bg-white/[0.02]">
         <div className="flex items-center gap-2 text-white/60">

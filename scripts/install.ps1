@@ -54,15 +54,28 @@ if ((Test-Path (Join-Path $RepoRoot "package.json")) -and (Test-Path (Join-Path 
     # Downloading release bundle from GitHub Releases
     Write-Host "Fetching latest release archive from GitHub ($Repo)..." -ForegroundColor Gray
     $zipUrl = "https://github.com/$Repo/releases/latest/download/verya-windows-x64.zip"
+    $checksumUrl = "https://github.com/$Repo/releases/latest/download/checksums.txt"
     $tempZip = Join-Path $env:TEMP "verya-windows-x64.zip"
-    
+    $tempChecksums = Join-Path $env:TEMP "verya-checksums.txt"
+
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         Invoke-WebRequest -Uri $zipUrl -OutFile $tempZip -UseBasicParsing
+        Invoke-WebRequest -Uri $checksumUrl -OutFile $tempChecksums -UseBasicParsing
+
+        # Verify the archive against the published SHA-256 before extracting.
+        $expected = (Get-Content $tempChecksums | Where-Object { $_ -match 'verya-windows-x64\.zip$' }) -split '\s+' | Select-Object -First 1
+        $actual = (Get-FileHash -Path $tempZip -Algorithm SHA256).Hash
+        if (-not $expected -or $actual.ToLower() -ne $expected.ToLower()) {
+            throw "Checksum verification failed for verya-windows-x64.zip"
+        }
+        Write-Host "✓ Checksum verified" -ForegroundColor Green
+
         Expand-Archive -Path $tempZip -DestinationPath $InstallDir -Force
         Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
+        Remove-Item $tempChecksums -Force -ErrorAction SilentlyContinue
     } catch {
-        Write-Host "⚠ Could not download release zip ($zipUrl). Falling back to git clone..." -ForegroundColor Yellow
+        Write-Host "⚠ Could not download a verified release bundle ($zipUrl). Falling back to git clone..." -ForegroundColor Yellow
         git clone https://github.com/$Repo.git $InstallDir --depth 1
         Push-Location $InstallDir
         npm install --omit=dev

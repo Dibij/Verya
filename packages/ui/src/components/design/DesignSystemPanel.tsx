@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import { useStore } from '../../store'
 import { api } from '../../lib/api'
+import { buildSelector, resolveTargetFile } from '../../lib/selector'
 import { Sparkles, Check, Wand2 } from 'lucide-react'
 
 export const DesignSystemPanel = () => {
   const selectedElement = useStore((s) => s.selectedElement)
   const project = useStore((s) => s.project)
+  const componentTree = useStore((s) => s.componentTree)
   const glassPreset = useStore((s) => s.glassPreset)
   const setGlassPreset = useStore((s) => s.setGlassPreset)
   const addTerminalLog = useStore((s) => s.addTerminalLog)
+  const setBuildStatus = useStore((s) => s.setBuildStatus)
 
   const [applying, setApplying] = useState(false)
   const [applied, setApplied] = useState(false)
@@ -49,20 +52,22 @@ export const DesignSystemPanel = () => {
         },
       ]
 
+      const target = resolveTargetFile(selectedElement, project, componentTree)
+      setBuildStatus('compiling')
       const res = await api.transform({
-        file: project.entryFile,
-        selector: {
-          tagName: selectedElement.tagName,
-          className: selectedElement.className,
-          componentName: selectedElement.componentName ?? undefined,
-        },
+        file: target.file,
+        selector: buildSelector(selectedElement),
         changes,
       })
 
       if (res.success) {
+        setBuildStatus('ready')
         setApplied(true)
         addTerminalLog(`Applied Glassmorphism preset to <${selectedElement.tagName}>`)
         setTimeout(() => setApplied(false), 2000)
+      } else {
+        setBuildStatus('error')
+        addTerminalLog(`✖ Glassmorphism preset failed: ${res.error ?? 'unknown error'}`)
       }
     } finally {
       setApplying(false)

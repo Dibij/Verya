@@ -1,12 +1,12 @@
 {
   "name": "@verya/server",
-  "version": "0.1.0",
+  "version": "0.2.5",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc && node scripts/copy-bridge.js",
-    "dev": "tsx watch src/index.ts"
+    "dev": "tsx watch src/dev.ts"
   },
   "dependencies": {
     "express": "^4.21.0",

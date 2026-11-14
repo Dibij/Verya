@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import path from 'path';
 import _traverse from '@babel/traverse';
 const traverse = ((_traverse as any).default || _traverse) as any;
 import * as t from '@babel/types';
 import { parseFile } from '../ast/parser.js';
+import { resolveWithin } from '../lib/safePath.js';
 import type { ComponentNode } from '../types.js';
 
 function getJSXTagName(node: t.JSXOpeningElement): string {
@@ -76,8 +76,15 @@ export function createComponentTreeRouter(projectInfo: { root: string }): Router
       return res.status(400).json({ error: 'Missing file query param' });
     }
 
-    const resolved = path.resolve(filePath);
-    if (!resolved.startsWith(projectInfo.root)) {
+    const resolved = (() => {
+      try {
+        return resolveWithin(projectInfo.root, filePath);
+      } catch {
+        return null;
+      }
+    })();
+
+    if (!resolved) {
       return res.status(403).json({ error: 'Access denied: path outside project root' });
     }
 
